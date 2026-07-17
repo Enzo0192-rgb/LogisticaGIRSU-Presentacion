@@ -7,7 +7,7 @@ import math
 import plotly.express as px
 from pathlib import Path
 
-st.set_page_config(page_title="GIRSU - Nuevo Modelo Logístico", layout="wide")
+st.set_page_config(page_title="Residuos en el Gran Santa Fe 2060", layout="wide")
 
 st.markdown("""
 <style>
@@ -22,8 +22,24 @@ div[data-testid="stMetric"] {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("GIRSU - DASHBOARD")
-st.caption("Escenarios con Estaciones de Transferencia, Planta de Energía y alternativas de Futuro Relleno Sanitario")
+logo_path = Path(__file__).parent / "encuentro.jpeg"
+
+encabezado_izq, encabezado_der = st.columns([5, 2])
+
+with encabezado_izq:
+    st.title(
+        "Residuos en el Gran Santa Fe 2060. "
+        "Dashboard de alternativas de gestión integral. "
+        "Data Encuentro 2026."
+    )
+    st.caption(
+        "Escenarios con Estaciones de Transferencia, Planta de Energía "
+        "y alternativas de Futuro Relleno Sanitario"
+    )
+
+with encabezado_der:
+    if logo_path.exists():
+        st.image(str(logo_path), use_container_width=True)
 
 # Archivo de datos: busca primero la base nueva y, si no está, usa nombres anteriores.
 base_path = Path(__file__).parent
@@ -509,6 +525,24 @@ try:
     folium.LayerControl(collapsed=False).add_to(m)
 
     st_folium(m, width="100%", height=500, key="mapa_modelo_nuevo")
+
+    st.markdown(
+        """
+        <div style="
+            text-align: right;
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.45;
+            margin-top: 4px;
+            margin-bottom: 6px;
+        ">
+            Lic. en Logística Enzo Martinez<br>
+            enzodmartinez@gmail.com<br>
+            +54 343-5055313
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
 
