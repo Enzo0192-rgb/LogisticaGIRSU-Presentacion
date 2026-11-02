@@ -10,20 +10,18 @@ from datetime import datetime
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS (Corregido para que el mapa se vea y con la estética pedida)
+# 2. CSS (Estética profesional y corrección del Header)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
     
-    /* Reset y fuentes */
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     header { visibility: hidden; }
     footer { visibility: hidden; }
     
-    /* Fondo general claro para el área del mapa */
+    /* Fondo general claro */
     .stApp { background-color: #f1f5f9; }
 
-    /* Márgenes mínimos */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
@@ -32,7 +30,7 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* --- BARRA SUPERIOR (Header) --- */
+    /* --- BARRA SUPERIOR (Header Oscuro) --- */
     .top-navbar {
         background-color: #0f172a;
         padding: 10px 30px;
@@ -48,14 +46,12 @@ st.markdown("""
         gap: 20px;
     }
     .main-title {
-        color: #f8fafc;
+        color: #f8fafc !important; /* Texto blanco para que se lea en el fondo oscuro */
         font-size: 1.6rem;
         font-weight: 800;
         margin: 0;
         letter-spacing: 0.5px;
     }
-    
-    /* Logo ENCUENTRO (fondo blanco para que resalte en el header oscuro) */
     .logo-box {
         background-color: white;
         padding: 5px 15px;
@@ -127,12 +123,13 @@ st.markdown("""
 now = datetime.now().strftime("%d-%b, %H:%M %p")
 logo_path = Path(__file__).parent / "encuentro.jpeg"
 
-# Usamos columnas de Streamlit para alinear el logo y el título
-col_logo, col_title, col_status = st.columns([1, 4, 2])
+# Usamos columnas de Streamlit para alinear el logo y el título, con un fondo simulado
+st.markdown('<div class="top-navbar">', unsafe_allow_html=True)
+col_logo, col_title, col_status = st.columns([1.5, 5, 2.5])
 
 with col_logo:
     if logo_path.exists():
-        st.image(str(logo_path), width=150)
+        st.image(str(logo_path), width=130)
     else:
         st.markdown("<div class='logo-box'><b>ENCUENTRO</b></div>", unsafe_allow_html=True)
 
@@ -141,14 +138,12 @@ with col_title:
 
 with col_status:
     st.markdown(f"""
-    <div style="text-align: right; color: #94a3b8; font-size: 0.85rem; padding-top: 15px;">
+    <div style="text-align: right; color: #94a3b8; font-size: 0.85rem; padding-top: 12px;">
         <span style="color: #10b981; margin-right: 15px;">🟢 Estado: Óptimo</span>
         {now}
     </div>
     """, unsafe_allow_html=True)
-
-# Separador visual
-st.markdown("<hr style='border-color: #1e293b; margin-top: 0; margin-bottom: 20px;'>", unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # 4. CARGA DE DATOS
@@ -265,12 +260,12 @@ try:
     costo_viaje = ((km_directo * cons_cargado) + (km_directo * cons_vacio)) * precio_litro
     costo_diario = costo_viaje * viajes_dia
 
-    # 7. ÁREA PRINCIPAL (Mapa y KPIs)
-    # Envolvemos el mapa en un contenedor con padding para que no quede pegado a los bordes
+    # 7. ÁREA PRINCIPAL
     with st.container():
         st.markdown('<div class="content-padding">', unsafe_allow_html=True)
         
-        m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="CartoDB positron", attr="CartoDB")
+        # MAPA: Cambiado a OpenStreetMap para evitar el bloqueo de API KEY de CartoDB
+        m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
 
         # Orígenes
         origenes_coords = df_dist[["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
@@ -278,7 +273,7 @@ try:
             folium.Marker(
                 [o["ORIGEN_LAT"], o["ORIGEN_LON"]],
                 icon=folium.DivIcon(html=f'''
-                    <div style="font-size: 12px; font-weight: 700; color: #0f172a; background: #e2e8f0; border-radius: 4px; padding: 4px 8px; border: 1px solid #94a3b8; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transform: translate(-50%, -50%);">
+                    <div style="font-size: 11px; font-weight: 700; color: #ffffff; background: #0f172a; border-radius: 4px; padding: 3px 6px; border: 1px solid #334155; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transform: translate(-50%, -50%); white-space: nowrap;">
                         🏙️ {o["ORIGEN"]}
                     </div>
                 ''')
