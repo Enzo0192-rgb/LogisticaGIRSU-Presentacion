@@ -12,8 +12,9 @@ st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 # 2. CSS AGRESIVO para compactar todo al extremo
 st.markdown("""
 <style>
-    /* Ocultar barra superior de Streamlit */
+    /* Ocultar barra superior y pie de página de Streamlit */
     header { visibility: hidden; }
+    footer { visibility: hidden; }
     
     /* Reducir márgenes al mínimo en la página principal */
     .block-container {
@@ -24,19 +25,19 @@ st.markdown("""
         max-width: 100% !important;
     }
     
-    /* Título más chico */
-    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.2rem !important; }
+    /* Títulos más compactos */
+    h3 { margin-top: 0rem !important; margin-bottom: 0.2rem !important; font-size: 1.2rem !important; padding-top: 0 !important; }
     
     /* Estilo general de las métricas (abajo) */
     [data-testid="stMetric"] { 
-        padding: 8px 12px !important; 
+        padding: 5px 10px !important; 
         background-color: #f0f2f6; 
         border-radius: 8px; 
         border: 1px solid #d1d5db; 
-        min-height: 70px !important;
+        min-height: 55px !important;
     }
-    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.3rem !important; }
-    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.8rem !important; white-space: nowrap; }
+    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; }
+    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.75rem !important; white-space: nowrap; }
     
     /* --- CONFIGURACIÓN DEL SIDEBAR IZQUIERDO --- */
     [data-testid="stSidebar"] {
@@ -232,7 +233,7 @@ try:
     km_totales_dia = distancia_viaje_redondo * viajes_dia
     costo_total_dia = costo_por_viaje * viajes_dia
 
-    # 6. MAPA (Altura aumentada a 530)
+    # 6. MAPA (Altura reducida a 400 para dejar espacio abajo)
     if not es_actual:
         rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
         map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
@@ -297,13 +298,10 @@ try:
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    # MAPA (Altura 530 para que ocupe más pantalla)
-    st_folium(m, width="100%", height=530, key="mapa_modelo_nuevo")
+    # MAPA (Altura 400 para que quepa todo abajo)
+    st_folium(m, width="100%", height=400, key="mapa_modelo_nuevo")
 
-    # Espaciador para empujar los indicadores hacia abajo
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-
-    # 7. INDICADORES LOGÍSTICOS (Abajo)
+    # 7. INDICADORES LOGÍSTICOS (Abajo, ajustados)
     st.markdown("### 🚚 Indicadores logísticos estimados")
     
     g1, g2, g3, g4, g5, g6 = st.columns(6)
