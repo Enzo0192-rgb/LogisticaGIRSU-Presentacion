@@ -7,63 +7,43 @@ import math
 from pathlib import Path
 
 # 1. Configuración de página
-st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
+st.set_page_config(page_title="Flujo Logístico GIRSU", layout="wide")
 
-# 2. CSS Ajustado para pantalla completa sin scroll
+# 2. CSS para una interfaz limpia, sin scroll y profesional
 st.markdown("""
 <style>
-    /* Ocultar barra superior y pie de página */
     header { visibility: hidden; }
     footer { visibility: hidden; }
-    
-    /* Márgenes mínimos */
     .block-container {
-        padding-top: 0.2rem !important;
+        padding-top: 0.5rem !important;
         padding-bottom: 0rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        max-width: 100% !important;
     }
+    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.4rem !important; color: #1f2937; }
     
-    /* Títulos muy compactos */
-    h3 { margin-top: 0rem !important; margin-bottom: 0.2rem !important; font-size: 1.1rem !important; padding-top: 0 !important; }
-    
-    /* --- MÉTRICAS DE ABAJO (Ultra chatas) --- */
+    /* Tarjetas de métricas abajo */
     [data-testid="stMetric"] { 
-        padding: 2px 8px !important; 
-        background-color: #f0f2f6; 
-        border-radius: 6px; 
-        border: 1px solid #d1d5db; 
-        min-height: 45px !important; 
+        padding: 5px 10px !important; 
+        background-color: #f8fafc; 
+        border-radius: 8px; 
+        border: 1px solid #e2e8f0; 
+        min-height: 60px !important;
     }
-    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; margin-top: -2px !important; }
-    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.7rem !important; white-space: nowrap; margin-bottom: -5px !important; }
+    [data-testid="stMetricValue"] { color: #0f172a !important; font-weight: 700 !important; font-size: 1.2rem !important; }
+    [data-testid="stMetricLabel"] { color: #64748b !important; font-size: 0.8rem !important; }
     
-    /* --- SIDEBAR IZQUIERDO --- */
-    [data-testid="stSidebar"] {
-        min-width: 300px !important;
-        max-width: 300px !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 0.1rem !important; 
-    }
+    /* Sidebar compacto */
+    [data-testid="stSidebar"] { min-width: 310px !important; max-width: 310px !important; }
     [data-testid="stSidebar"] [data-testid="stMetric"] { 
-        padding: 2px 10px !important; 
-        min-height: 40px !important;
-        margin-bottom: 0px !important;
+        padding: 2px 10px !important; min-height: 45px !important; margin-bottom: 2px !important;
+        background-color: #ffffff; border: 1px solid #e2e8f0;
     }
-    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1rem !important; }
-    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 0.7rem !important; }
-    
-    [data-testid="stSidebar"] .stSelectbox { margin-bottom: -15px !important; }
-    [data-testid="stSidebar"] hr { margin: 0.5rem 0 !important; }
-    
-    /* Forzar que el mapa no se colapse */
-    iframe { min-height: 460px !important; }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("### Dashboard de alternativas")
+st.markdown("### 🚛 Flujo Logístico GIRSU - Área Metropolitana")
 
 # 3. CARGA DE DATOS
 base_path = Path(__file__).parent
@@ -77,15 +57,11 @@ try:
     df_distrib = pd.read_excel(archivo, sheet_name="DISTRIBUCION_INFRAESTRUCTURA").dropna(how="all")
     df_rellenos = pd.read_excel(archivo, sheet_name="FUTUROS_RELLENOS").dropna(how="all")
 
+    # Limpieza
     for df in [df_residuos, df_infra, df_escenarios, df_dist, df_distrib, df_rellenos]:
         df.columns = df.columns.astype(str).str.strip()
 
-    for col in ["NOMBRE", "DESTINO"]:
-        if col in df_infra.columns:
-            df_infra[col] = df_infra[col].replace({"Planta de Energía - Actual RS": "Planta de Energía", "Planta de Energia - Actual RS": "Planta de Energía", "Planta Energia - Actual RS": "Planta de Energía"})
-        if col in df_distrib.columns:
-            df_distrib[col] = df_distrib[col].replace({"Planta de Energía - Actual RS": "Planta de Energía", "Planta de Energia - Actual RS": "Planta de Energía", "Planta Energia - Actual RS": "Planta de Energía"})
-
+    # Coordenadas
     df_infra["LATITUD"] = pd.to_numeric(df_infra["LATITUD"], errors="coerce")
     df_infra["LONGITUD"] = pd.to_numeric(df_infra["LONGITUD"], errors="coerce")
     df_rellenos["LATITUD"] = pd.to_numeric(df_rellenos["LATITUD"], errors="coerce")
@@ -98,59 +74,53 @@ try:
     df_dist["FACTOR_RUTA"] = pd.to_numeric(df_dist["FACTOR_RUTA"], errors="coerce").fillna(1.25)
     df_dist["KM_OPERATIVO"] = pd.to_numeric(df_dist["KM_OPERATIVO"], errors="coerce")
     df_dist["KM_RUTA_REAL"] = pd.to_numeric(df_dist["KM_RUTA_REAL"], errors="coerce")
-    df_dist["KM_ESTIMADO"] = df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"]
-    df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_ESTIMADO"])
+    df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"])
 
-    # PARÁMETROS FIJOS
+    # Parámetros fijos
     capacidad_t = 30
     precio_litro = 1100.0
     cons_cargado = 0.52
     cons_vacio = 0.30
-    mostrar_rutas = True
-    mostrar_radios = False
 
-    # 4. SIDEBAR (Controles + Resumen apilado)
+    # 4. SIDEBAR
     with st.sidebar:
-        st.markdown("#### 📍 Escenario operativo")
-        escenarios = df_escenarios["ESCENARIO"].dropna().tolist()
-        escenario_sel = st.selectbox("Seleccionar escenario:", escenarios, label_visibility="collapsed")
+        st.markdown("#### ⚙️ Configuración")
+        
+        escenario_sel = st.selectbox("Escenario operativo:", df_escenarios["ESCENARIO"].dropna().tolist())
         escenario_row = df_escenarios[df_escenarios["ESCENARIO"] == escenario_sel].iloc[0]
         es_actual = escenario_sel == "Actual 600"
 
-        st.markdown("#### 🗺️ Futuro Relleno Sanitario")
         if es_actual:
             relleno_sel = "Actual Relleno Sanitario"
-            relleno_id = None
-            st.info("Escenario actual.")
+            relleno_id = "ET1" # Usamos ET1 como el relleno actual
         else:
-            relleno_sel = st.selectbox("Seleccionar ubicación:", df_rellenos["NOMBRE"].dropna().tolist(), label_visibility="collapsed")
+            relleno_sel = st.selectbox("Ubicación Futuro Relleno:", df_rellenos["NOMBRE"].dropna().tolist())
             relleno_id = df_rellenos[df_rellenos["NOMBRE"] == relleno_sel]["ID_RELLENO"].iloc[0]
 
         st.markdown("---")
         
+        # Variables del escenario
         generacion_total = float(escenario_row["GENERACION_TOTAL"])
         ton_relleno = float(escenario_row["TON_A_RELLENO"])
         ton_et = float(escenario_row["TON_A_ET"])
         ton_planta = float(escenario_row["TON_A_PLANTA"])
-        porcentaje_relleno = ton_relleno / generacion_total if generacion_total else 0
-        porcentaje_et = ton_et / generacion_total if generacion_total else 0
-        porcentaje_planta = ton_planta / generacion_total if generacion_total else 0
-        porcentaje_valorizacion = porcentaje_planta
-
+        
+        # RESUMEN EN SIDEBAR
         st.markdown("#### 📊 Resumen")
         st.metric("Generación total", f"{generacion_total:.0f} t/día", border=True)
-        st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{porcentaje_relleno:.1%}", border=True)
-        st.metric("A ET", f"{ton_et:.0f} t/día", f"{porcentaje_et:.1%}", border=True)
-        st.metric("A Planta Energía", f"{ton_planta:.0f} t/día", f"{porcentaje_planta:.1%}", border=True)
-        st.metric("Valorización energética", f"{porcentaje_valorizacion:.1%}", border=True)
+        st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{ton_relleno/generacion_total:.0%}", border=True)
+        st.metric("A ET", f"{ton_et:.0f} t/día", f"{ton_et/generacion_total:.0%}", border=True)
+        st.metric("A Planta Energía", f"{ton_planta:.0f} t/día", f"{ton_planta/generacion_total:.0%}", border=True)
+        st.metric("Valorización", f"{ton_planta/generacion_total:.1%}", border=True)
 
-    # 5. CÁLCULOS LOGÍSTICOS
+    # 5. CÁLCULO DE INDICADORES LOGÍSTICOS
     col_ton = "TON_ACTUAL_DIA" if generacion_total == 600 else "TON_PROYECTADA_800"
     df_origenes = df_residuos[["ORIGEN", col_ton]].copy()
     df_origenes.columns = ["ORIGEN", "TON_DIA"]
     df_origenes = df_origenes.dropna(subset=["ORIGEN"])
     df_origenes["TON_DIA"] = pd.to_numeric(df_origenes["TON_DIA"], errors="coerce").fillna(0)
-
+    
+    # Función auxiliar para buscar distancias
     def km_lookup(tipo_flujo, origen=None, destino=None, origen_id=None, destino_id=None):
         temp = df_dist[df_dist["TIPO_FLUJO"] == tipo_flujo].copy()
         if origen is not None: temp = temp[temp["ORIGEN"] == origen]
@@ -160,164 +130,140 @@ try:
         if temp.empty: return 0.0
         return float(temp["KM_USADO"].iloc[0])
 
-    def weighted_km_direct_to_relleno():
-        if es_actual:
-            total = 0
-            for _, r in df_origenes.iterrows():
-                km = km_lookup("Origen → ET", origen=r["ORIGEN"], destino_id="ET1")
-                total += r["TON_DIA"] * km
-            return total / max(df_origenes["TON_DIA"].sum(), 1)
-        total = 0
-        for _, r in df_origenes.iterrows():
-            km = km_lookup("Origen → Futuro RS", origen=r["ORIGEN"], destino_id=relleno_id)
-            total += r["TON_DIA"] * km
-        return total / max(df_origenes["TON_DIA"].sum(), 1)
-
-    def km_promedio_origen_a_et():
-        distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
-        distrib_esc = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]
-        if distrib_esc.empty: return 0
-        total_ton_km = 0
-        total_ton = 0
-        for _, dest in distrib_esc.iterrows():
-            destino_id = dest["DESTINO_ID"]
-            ton_destino = float(dest["TON_DIA"])
-            for _, origen in df_origenes.iterrows():
-                proporcion = origen["TON_DIA"] / max(df_origenes["TON_DIA"].sum(), 1)
-                ton_asignada = ton_destino * proporcion
-                km = km_lookup("Origen → ET", origen=origen["ORIGEN"], destino_id=destino_id)
-                total_ton_km += ton_asignada * km
-                total_ton += ton_asignada
-        return total_ton_km / max(total_ton, 1)
-
-    def km_promedio_et_a_relleno():
-        if es_actual or relleno_id is None: return 0
-        distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
-        distrib_esc = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]
-        if distrib_esc.empty: return 0
-        total_ton_km = 0
-        total_ton = 0
-        for _, dest in distrib_esc.iterrows():
-            origen_id = dest["DESTINO_ID"]
-            ton_destino = float(dest["TON_DIA"])
-            km = km_lookup("ET → Futuro RS", origen_id=origen_id, destino_id=relleno_id)
-            total_ton_km += ton_destino * km
-            total_ton += ton_destino
-        return total_ton_km / max(total_ton, 1)
-
-    km_directo = weighted_km_direct_to_relleno()
-    km_origen_et = km_promedio_origen_a_et()
-    km_et_relleno = km_promedio_et_a_relleno()
-
-    km_promedio_ponderado = 0
-    if es_actual or escenario_sel == "Futuro 800 - Alternativa 1":
-        km_promedio_ponderado = km_directo
-    elif escenario_sel == "Futuro 800 - Alternativa 2":
-        km_promedio_ponderado = ((ton_relleno * km_directo) + (ton_et * (km_origen_et + km_et_relleno))) / generacion_total
-    elif escenario_sel == "Futuro 800 - Alternativa 3":
-        km_planta = 0
-        for _, origen in df_origenes.iterrows():
-            km = km_lookup("Origen → Planta Energía", origen=origen["ORIGEN"], destino_id="PE1")
-            km_planta += origen["TON_DIA"] * km
-        km_planta = km_planta / max(df_origenes["TON_DIA"].sum(), 1)
-        km_promedio_ponderado = ((ton_relleno * km_directo) + (ton_et * (km_origen_et + km_et_relleno)) + (ton_planta * km_planta)) / generacion_total
-
-    toneladas_batea = ton_relleno
-    km_batea_ida = km_directo
-    distancia_viaje_redondo = km_batea_ida * 2
-    viajes_dia = math.ceil(toneladas_batea / capacidad_t) if toneladas_batea > 0 else 0
-    litros_por_viaje = km_batea_ida * cons_cargado + km_batea_ida * cons_vacio
-    costo_por_viaje = litros_por_viaje * precio_litro
-    km_totales_dia = distancia_viaje_redondo * viajes_dia
-    costo_total_dia = costo_por_viaje * viajes_dia
-
-    # 6. MAPA
-    if not es_actual:
-        rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-        map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
+    # Cálculo simple para los KPIs de abajo
+    if es_actual:
+        km_directo = sum(r["TON_DIA"] * km_lookup("Origen → ET", origen=r["ORIGEN"], destino_id="ET1") for _, r in df_origenes.iterrows()) / max(df_origenes["TON_DIA"].sum(), 1)
     else:
-        map_center = [-31.62, -60.75]
+        km_directo = sum(r["TON_DIA"] * km_lookup("Origen → Futuro RS", origen=r["ORIGEN"], destino_id=relleno_id) for _, r in df_origenes.iterrows()) / max(df_origenes["TON_DIA"].sum(), 1)
 
-    m = folium.Map(location=map_center, zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
+    viajes_dia = math.ceil(ton_relleno / capacidad_t) if ton_relleno > 0 else 0
+    km_totales = (km_directo * 2) * viajes_dia
+    costo_viaje = ((km_directo * cons_cargado) + (km_directo * cons_vacio)) * precio_litro
+    costo_diario = costo_viaje * viajes_dia
 
-    def agregar_etiqueta_mapa(lat, lon, texto):
-        folium.Marker([lat, lon], icon=folium.DivIcon(html=f'<div style="font-size: 11px; font-weight: 700; color: #1f2937; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(31, 41, 55, 0.25); border-radius: 6px; padding: 2px 5px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transform: translate(15px, -10px);">{texto}</div>')).add_to(m)
+    # 6. MAPA DE FLUJOS
+    # Centramos el mapa en el área metropolitana
+    m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="CartoDB positron", attr="CartoDB")
 
-    if mostrar_radios:
-        centro = df_infra[df_infra["ID"] == "ET1"].iloc[0]
-        for radio, color in [(20000, "blue"), (35000, "orange"), (50000, "red")]:
-            folium.Circle([centro["LATITUD"], centro["LONGITUD"]], radius=radio, color=color, fill=True, fill_opacity=0.06).add_to(m)
+    # A. Dibujar Orígenes (Santa Fe, Santo Tomé, OA Metrop)
+    origenes_coords = df_dist[["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
+    for _, o in origenes_coords.iterrows():
+        folium.Marker(
+            [o["ORIGEN_LAT"], o["ORIGEN_LON"]],
+            icon=folium.DivIcon(html=f'''
+                <div style="font-size: 12px; font-weight: bold; color: #0f172a; background: #e2e8f0; border-radius: 4px; padding: 4px 8px; border: 1px solid #94a3b8; transform: translate(-50%, -50%);">
+                    🏙️ {o["ORIGEN"]}
+                </div>
+            ''')
+        ).add_to(m)
 
+    # B. Dibujar Infraestructura (ETs, Planta)
     df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
     for _, r in df_infra_mapa.iterrows():
-        if pd.isna(r["LATITUD"]) or pd.isna(r["LONGITUD"]): continue
+        if pd.isna(r["LATITUD"]): continue
         
-        # --- CAMBIO AQUÍ: Renombrar ET1 a Actual Relleno Sanitario ---
-        nombre_mostrar = r["NOMBRE"]
-        if r["ID"] == "ET1":
-            nombre_mostrar = "Actual Relleno Sanitario"
-        # -------------------------------------------------------------
-
+        # Renombrar ET1 si es el escenario actual
+        nombre = "Actual Relleno Sanitario" if (r["ID"] == "ET1" and es_actual) else r["NOMBRE"]
         color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
         icon = "bolt" if color == "green" else "truck"
         
-        # Usamos "nombre_mostrar" en lugar de "r['NOMBRE']"
-        folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=f"{r['ID']} - {nombre_mostrar}", popup=f"{nombre_mostrar}<br>Tipo: {r['TIPO']}<br>Capacidad: {r['CAPACIDAD_TN_DIA']} t/día", icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
-        agregar_etiqueta_mapa(r["LATITUD"], r["LONGITUD"], nombre_mostrar)
+        folium.Marker(
+            [r["LATITUD"], r["LONGITUD"]],
+            tooltip=nombre,
+            icon=folium.Icon(color=color, icon=icon, prefix="fa")
+        ).add_to(m)
 
+    # C. Dibujar Futuro Relleno
     if not es_actual:
         rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-        folium.Marker([rr["LATITUD"], rr["LONGITUD"]], tooltip=f"Futuro RS - {rr['NOMBRE']}", popup=f"Futuro Relleno Sanitario<br>{rr['NOMBRE']}", icon=folium.Icon(color="red", icon="flag", prefix="fa")).add_to(m)
-        agregar_etiqueta_mapa(rr["LATITUD"], rr["LONGITUD"], rr["NOMBRE"])
+        folium.Marker(
+            [rr["LATITUD"], rr["LONGITUD"]],
+            tooltip=f"Futuro RS: {rr['NOMBRE']}",
+            icon=folium.Icon(color="red", icon="flag", prefix="fa")
+        ).add_to(m)
 
-    if mostrar_rutas:
-        origenes_coords = df_dist[df_dist["TIPO_FLUJO"] == "Origen → Futuro RS"][["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
-        if es_actual:
-            destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
+    # D. LÓGICA DE FLUJOS (Animaciones)
+    if es_actual:
+        # Todo va a ET1
+        destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
+        for _, o in origenes_coords.iterrows():
+            AntPath(
+                locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [destino["LATITUD"], destino["LONGITUD"]]],
+                delay=800, color="#3b82f6", weight=4, opacity=0.8
+            ).add_to(m)
+            
+    elif escenario_sel == "Futuro 800 - Alternativa 1":
+        # Todo directo al Futuro RS
+        rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+        for _, o in origenes_coords.iterrows():
+            AntPath(
+                locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [rr["LATITUD"], rr["LONGITUD"]]],
+                delay=800, color="#ef4444", weight=4, opacity=0.8
+            ).add_to(m)
+            
+    else:
+        # Alternativas 2 y 3
+        # 1. Flujo directo de Origenes al Futuro RS
+        rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+        for _, o in origenes_coords.iterrows():
+            AntPath(
+                locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [rr["LATITUD"], rr["LONGITUD"]]],
+                delay=800, color="#ef4444", weight=3, opacity=0.6
+            ).add_to(m)
+            
+        # 2. Flujo de Origenes a ETs y de ETs al Futuro RS
+        distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
+        et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
+        
+        for et_id in et_ids:
+            et = df_infra[df_infra["ID"] == et_id].iloc[0]
+            # Origenes a ET
             for _, o in origenes_coords.iterrows():
-                AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [destino["LATITUD"], destino["LONGITUD"]]], delay=1000, color="blue", weight=4).add_to(m)
-        elif escenario_sel == "Futuro 800 - Alternativa 1":
-            rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            for _, o in origenes_coords.iterrows():
-                AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="red", weight=4).add_to(m)
-        else:
-            distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
-            et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
-            for et_id in et_ids:
-                et = df_infra[df_infra["ID"] == et_id].iloc[0]
-                for _, o in origenes_coords.iterrows():
-                    AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [et["LATITUD"], et["LONGITUD"]]], delay=1000, color="blue", weight=3).add_to(m)
-                rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-                AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="red", weight=5).add_to(m)
-            if escenario_sel == "Futuro 800 - Alternativa 3":
-                planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
-                for _, o in origenes_coords.iterrows():
-                    AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [planta["LATITUD"], planta["LONGITUD"]]], delay=1000, color="green", weight=4).add_to(m)
+                AntPath(
+                    locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [et["LATITUD"], et["LONGITUD"]]],
+                    delay=800, color="#3b82f6", weight=3, opacity=0.8
+                ).add_to(m)
+            # ET al Relleno
+            AntPath(
+                locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]],
+                delay=800, color="#ef4444", weight=4, opacity=0.9
+            ).add_to(m)
 
+        # 3. Flujo a Planta de Energía (Solo Alternativa 3)
+        if escenario_sel == "Futuro 800 - Alternativa 3":
+            planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
+            for _, o in origenes_coords.iterrows():
+                AntPath(
+                    locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [planta["LATITUD"], planta["LONGITUD"]]],
+                    delay=800, color="#10b981", weight=4, opacity=0.8
+                ).add_to(m)
+
+    # Capas GIS (WMS)
     wms_url = "https://aswe.santafe.gov.ar/idesf/wms"
-    capas_wms = [
-        {"layers": "areas_de_riesgo_hidrico", "name": "🌊 Riesgo hídrico"},
-        {"layers": "ma_otbn_2021", "name": "🌳 Bosques nativos"},
-        {"layers": "ind_produccion", "name": "🌾 Productividad del suelo"},
-    ]
-    for capa in capas_wms:
-        folium.raster_layers.WmsTileLayer(url=wms_url, layers=capa["layers"], name=capa["name"], fmt="image/png", transparent=True, overlay=True, control=True, show=False).add_to(m)
+    for layers, name in [
+        ("areas_de_riesgo_hidrico", "🌊 Riesgo hídrico"),
+        ("ma_otbn_2021", "🌳 Bosques nativos"),
+        ("ind_produccion", "🌾 Productividad del suelo")
+    ]:
+        folium.raster_layers.WmsTileLayer(
+            url=wms_url, layers=layers, name=name, fmt="image/png",
+            transparent=True, overlay=True, control=True, show=False
+        ).add_to(m)
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    # MAPA
-    st_folium(m, width="100%", height=460, key="mapa_modelo_nuevo")
+    # 7. RENDERIZAR MAPA E INDICADORES
+    st_folium(m, width="100%", height=480, key="mapa_flujos")
 
-    # 7. INDICADORES LOGÍSTICOS
-    st.markdown("### 🚚 Indicadores logísticos estimados")
+    st.markdown("### 🚚 Indicadores logísticos de la flota")
     
     g1, g2, g3, g4, g5, g6 = st.columns(6)
-    g1.metric("Km ida batea", f"{km_batea_ida:.1f} km", border=True)
-    g2.metric("Viaje redondo", f"{distancia_viaje_redondo:.1f} km", border=True)
+    g1.metric("Km ida a RS", f"{km_directo:.1f} km", border=True)
+    g2.metric("Viaje redondo", f"{km_directo*2:.1f} km", border=True)
     g3.metric("Viajes diarios", f"{viajes_dia}", border=True)
-    g4.metric("Km totales diarios", f"{km_totales_dia:,.0f} km", border=True)
-    g5.metric("Costo/viaje", f"$ {costo_por_viaje:,.0f}", border=True)
-    g6.metric("Costo diario", f"$ {costo_total_dia:,.0f}", border=True)
+    g4.metric("Km totales diarios", f"{km_totales:,.0f} km", border=True)
+    g5.metric("Costo/viaje", f"$ {costo_viaje:,.0f}", border=True)
+    g6.metric("Costo diario", f"$ {costo_diario:,.0f}", border=True)
 
 except Exception as e:
-    st.error(f"Hubo un inconveniente con los datos: {e}")
+    st.error(f"Error en los datos: {e}")
