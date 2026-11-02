@@ -9,7 +9,7 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS Ajustado
+# 2. CSS Ajustado para pantalla completa sin scroll
 st.markdown("""
 <style>
     /* Ocultar barra superior y pie de página */
@@ -34,7 +34,7 @@ st.markdown("""
         background-color: #f0f2f6; 
         border-radius: 6px; 
         border: 1px solid #d1d5db; 
-        min-height: 45px !important; /* Altura mínima forzada */
+        min-height: 45px !important; 
     }
     [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; margin-top: -2px !important; }
     [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.7rem !important; white-space: nowrap; margin-bottom: -5px !important; }
@@ -101,6 +101,7 @@ try:
     df_dist["KM_ESTIMADO"] = df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"]
     df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_ESTIMADO"])
 
+    # PARÁMETROS FIJOS
     capacidad_t = 30
     precio_litro = 1100.0
     cons_cargado = 0.52
@@ -108,7 +109,7 @@ try:
     mostrar_rutas = True
     mostrar_radios = False
 
-    # 4. SIDEBAR
+    # 4. SIDEBAR (Controles + Resumen apilado)
     with st.sidebar:
         st.markdown("#### 📍 Escenario operativo")
         escenarios = df_escenarios["ESCENARIO"].dropna().tolist()
@@ -230,7 +231,7 @@ try:
     km_totales_dia = distancia_viaje_redondo * viajes_dia
     costo_total_dia = costo_por_viaje * viajes_dia
 
-    # 6. MAPA (Altura 460)
+    # 6. MAPA
     if not es_actual:
         rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
         map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
@@ -250,10 +251,19 @@ try:
     df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
     for _, r in df_infra_mapa.iterrows():
         if pd.isna(r["LATITUD"]) or pd.isna(r["LONGITUD"]): continue
+        
+        # --- CAMBIO AQUÍ: Renombrar ET1 a Actual Relleno Sanitario ---
+        nombre_mostrar = r["NOMBRE"]
+        if r["ID"] == "ET1":
+            nombre_mostrar = "Actual Relleno Sanitario"
+        # -------------------------------------------------------------
+
         color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
         icon = "bolt" if color == "green" else "truck"
-        folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=f"{r['ID']} - {r['NOMBRE']}", popup=f"{r['NOMBRE']}<br>Tipo: {r['TIPO']}<br>Capacidad: {r['CAPACIDAD_TN_DIA']} t/día", icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
-        agregar_etiqueta_mapa(r["LATITUD"], r["LONGITUD"], r["NOMBRE"])
+        
+        # Usamos "nombre_mostrar" en lugar de "r['NOMBRE']"
+        folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=f"{r['ID']} - {nombre_mostrar}", popup=f"{nombre_mostrar}<br>Tipo: {r['TIPO']}<br>Capacidad: {r['CAPACIDAD_TN_DIA']} t/día", icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
+        agregar_etiqueta_mapa(r["LATITUD"], r["LONGITUD"], nombre_mostrar)
 
     if not es_actual:
         rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
