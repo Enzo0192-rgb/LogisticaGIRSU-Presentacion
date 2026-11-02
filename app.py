@@ -9,27 +9,45 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS para compactar y evitar el scroll
+# 2. CSS AGRESIVO para compactar todo y evitar scroll
 st.markdown("""
 <style>
+    /* Ocultar barra superior de Streamlit */
+    header { visibility: hidden; }
+    
+    /* Reducir márgenes al mínimo */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0.5rem !important;
         padding-bottom: 0rem !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
-    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.4rem !important; }
-    /* Estilo para los cuadros de métricas */
+    
+    /* Título más chico */
+    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.3rem !important; }
+    
+    /* Estilo general de las métricas (abajo) */
     [data-testid="stMetric"] { 
-        padding: 10px 15px !important; 
+        padding: 5px 10px !important; 
         background-color: #f0f2f6; 
-        border-radius: 10px; 
+        border-radius: 8px; 
         border: 1px solid #d1d5db; 
+        min-height: 70px !important;
     }
-    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.5rem !important; }
-    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.9rem !important; }
-    /* Compactar el sidebar */
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
+    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; }
+    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.75rem !important; white-space: nowrap; }
+    
+    /* Hacer las métricas del SIDEBAR ultra chiquitas para que entren todas */
+    [data-testid="stSidebar"] [data-testid="stMetric"] { 
+        padding: 2px 8px !important; 
+        min-height: 45px !important;
+        margin-bottom: 2px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1rem !important; }
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 0.65rem !important; }
+    
+    /* Compactar inputs del sidebar */
+    [data-testid="stSidebar"] .stSelectbox { margin-bottom: -15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -47,7 +65,6 @@ try:
     df_distrib = pd.read_excel(archivo, sheet_name="DISTRIBUCION_INFRAESTRUCTURA").dropna(how="all")
     df_rellenos = pd.read_excel(archivo, sheet_name="FUTUROS_RELLENOS").dropna(how="all")
 
-    # Limpieza
     for df in [df_residuos, df_infra, df_escenarios, df_dist, df_distrib, df_rellenos]:
         df.columns = df.columns.astype(str).str.strip()
 
@@ -72,6 +89,17 @@ try:
     df_dist["KM_ESTIMADO"] = df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"]
     df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_ESTIMADO"])
 
+    # ==========================================
+    # PARÁMETROS FIJOS (antes en la barra lateral)
+    # ==========================================
+    capacidad_t = 30
+    precio_litro = 1100.0
+    cons_cargado = 0.52
+    cons_vacio = 0.30
+    mostrar_rutas = True
+    mostrar_radios = False
+    # ==========================================
+
     # 4. SIDEBAR (Controles + Resumen apilado)
     with st.sidebar:
         st.markdown("#### 📍 Escenario operativo")
@@ -91,7 +119,7 @@ try:
 
         st.markdown("---")
         
-        # CÁLCULOS DEL ESCENARIO (Para mostrar en el sidebar)
+        # CÁLCULOS DEL ESCENARIO
         generacion_total = float(escenario_row["GENERACION_TOTAL"])
         ton_relleno = float(escenario_row["TON_A_RELLENO"])
         ton_et = float(escenario_row["TON_A_ET"])
@@ -101,23 +129,13 @@ try:
         porcentaje_planta = ton_planta / generacion_total if generacion_total else 0
         porcentaje_valorizacion = porcentaje_planta
 
-        # RESUMEN APILADO AQUÍ
-        st.markdown("#### 📊 Resumen del escenario")
+        # RESUMEN APILADO
+        st.markdown("#### 📊 Resumen")
         st.metric("Generación total", f"{generacion_total:.0f} t/día", border=True)
         st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{porcentaje_relleno:.1%}", border=True)
         st.metric("A ET", f"{ton_et:.0f} t/día", f"{porcentaje_et:.1%}", border=True)
         st.metric("A Planta Energía", f"{ton_planta:.0f} t/día", f"{porcentaje_planta:.1%}", border=True)
         st.metric("Valorización energética", f"{porcentaje_valorizacion:.1%}", border=True)
-        
-        st.markdown("---")
-        st.markdown("#### ⚙️ Parámetros")
-        capacidad_t = st.selectbox("Capacidad batea (TN):", [30, 25, 20], label_visibility="collapsed")
-        precio_litro = st.number_input("Precio gasoil ($):", value=1100.0, label_visibility="collapsed")
-        cons_cargado = st.number_input("Consumo cargado (L/km):", value=0.52, label_visibility="collapsed")
-        cons_vacio = st.number_input("Consumo vacío (L/km):", value=0.30, label_visibility="collapsed")
-        
-        mostrar_rutas = st.checkbox("Mostrar líneas de flujo", value=True)
-        mostrar_radios = st.checkbox("Mostrar radios", value=False)
 
     # 5. CÁLCULOS LOGÍSTICOS
     col_ton = "TON_ACTUAL_DIA" if generacion_total == 600 else "TON_PROYECTADA_800"
@@ -206,7 +224,7 @@ try:
     km_totales_dia = distancia_viaje_redondo * viajes_dia
     costo_total_dia = costo_por_viaje * viajes_dia
 
-    # 6. MAPA (Área central)
+    # 6. MAPA
     if not es_actual:
         rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
         map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
@@ -260,7 +278,6 @@ try:
                 for _, o in origenes_coords.iterrows():
                     AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [planta["LATITUD"], planta["LONGITUD"]]], delay=1000, color="green", weight=4).add_to(m)
 
-    # CAPAS WMS SANTA FE
     wms_url = "https://aswe.santafe.gov.ar/idesf/wms"
     capas_wms = [
         {"layers": "areas_de_riesgo_hidrico", "name": "🌊 Riesgo hídrico"},
@@ -272,10 +289,10 @@ try:
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    # Renderizar Mapa (Altura ajustada para que quepa la pantalla)
-    st_folium(m, width="100%", height=480, key="mapa_modelo_nuevo")
+    # MAPA
+    st_folium(m, width="100%", height=360, key="mapa_modelo_nuevo")
 
-    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
 
     # 7. INDICADORES LOGÍSTICOS (Debajo del mapa, simétricos)
     st.markdown("### 🚚 Indicadores logísticos estimados")
