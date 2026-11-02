@@ -9,7 +9,7 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS para compactar todo y evitar el scroll
+# 2. CSS para compactar y evitar el scroll
 st.markdown("""
 <style>
     .block-container {
@@ -18,11 +18,18 @@ st.markdown("""
         padding-left: 1.5rem !important;
         padding-right: 1.5rem !important;
     }
-    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.5rem !important; }
-    [data-testid="stMetric"] { padding: 10px 15px !important; background-color: #f0f2f6; border-radius: 10px; border: 1px solid #d1d5db; }
+    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.4rem !important; }
+    /* Estilo para los cuadros de métricas */
+    [data-testid="stMetric"] { 
+        padding: 10px 15px !important; 
+        background-color: #f0f2f6; 
+        border-radius: 10px; 
+        border: 1px solid #d1d5db; 
+    }
     [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.5rem !important; }
     [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.9rem !important; }
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
+    /* Compactar el sidebar */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,50 +72,54 @@ try:
     df_dist["KM_ESTIMADO"] = df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"]
     df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_ESTIMADO"])
 
-    # 4. SIDEBAR
+    # 4. SIDEBAR (Controles + Resumen apilado)
     with st.sidebar:
-        st.header("⚙️ Configuración")
-        st.subheader("📍 Escenario operativo")
+        st.markdown("#### 📍 Escenario operativo")
         escenarios = df_escenarios["ESCENARIO"].dropna().tolist()
-        escenario_sel = st.selectbox("Seleccionar escenario:", escenarios)
+        escenario_sel = st.selectbox("Seleccionar escenario:", escenarios, label_visibility="collapsed")
         escenario_row = df_escenarios[df_escenarios["ESCENARIO"] == escenario_sel].iloc[0]
         es_actual = escenario_sel == "Actual 600"
 
-        st.subheader("🗺️ Futuro Relleno Sanitario")
+        st.markdown("#### 🗺️ Futuro Relleno Sanitario")
         if es_actual:
             relleno_sel = "Actual Relleno Sanitario"
             relleno_id = None
-            st.info("En el escenario actual no se selecciona futuro relleno.")
+            st.info("Escenario actual.")
         else:
-            relleno_sel = st.selectbox("Seleccionar ubicación:", df_rellenos["NOMBRE"].dropna().tolist())
+            relleno_sel = st.selectbox("Seleccionar ubicación:", df_rellenos["NOMBRE"].dropna().tolist(), label_visibility="collapsed")
             relleno_id = df_rellenos[df_rellenos["NOMBRE"] == relleno_sel]["ID_RELLENO"].iloc[0]
 
         st.markdown("---")
-        st.subheader("🚛 Equipo")
-        capacidad_t = st.selectbox("Capacidad de la batea / camión (TN):", [30, 25, 20])
+        
+        # CÁLCULOS DEL ESCENARIO (Para mostrar en el sidebar)
+        generacion_total = float(escenario_row["GENERACION_TOTAL"])
+        ton_relleno = float(escenario_row["TON_A_RELLENO"])
+        ton_et = float(escenario_row["TON_A_ET"])
+        ton_planta = float(escenario_row["TON_A_PLANTA"])
+        porcentaje_relleno = ton_relleno / generacion_total if generacion_total else 0
+        porcentaje_et = ton_et / generacion_total if generacion_total else 0
+        porcentaje_planta = ton_planta / generacion_total if generacion_total else 0
+        porcentaje_valorizacion = porcentaje_planta
+
+        # RESUMEN APILADO AQUÍ
+        st.markdown("#### 📊 Resumen del escenario")
+        st.metric("Generación total", f"{generacion_total:.0f} t/día", border=True)
+        st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{porcentaje_relleno:.1%}", border=True)
+        st.metric("A ET", f"{ton_et:.0f} t/día", f"{porcentaje_et:.1%}", border=True)
+        st.metric("A Planta Energía", f"{ton_planta:.0f} t/día", f"{porcentaje_planta:.1%}", border=True)
+        st.metric("Valorización energética", f"{porcentaje_valorizacion:.1%}", border=True)
+        
         st.markdown("---")
-        st.subheader("💰 Parámetros de costo")
-        precio_litro = st.number_input("Precio litro gasoil ($):", value=1100.0)
-        cons_cargado = st.number_input("Consumo ida cargado (L/km):", value=0.52)
-        cons_vacio = st.number_input("Consumo vuelta vacío (L/km):", value=0.30)
-        st.markdown("---")
-        st.subheader("🗺️ Visualización del mapa")
-        estilo_mapa = st.radio("Estilo de vista:", ["Claro (Calles)", "Satelital (Híbrido)"])
-        if estilo_mapa == "Claro (Calles)":
-            tile_provider = "OpenStreetMap"
-            attr = "OpenStreetMap"
-        else:
-            tile_provider = "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-            attr = "Google Maps"
+        st.markdown("#### ⚙️ Parámetros")
+        capacidad_t = st.selectbox("Capacidad batea (TN):", [30, 25, 20], label_visibility="collapsed")
+        precio_litro = st.number_input("Precio gasoil ($):", value=1100.0, label_visibility="collapsed")
+        cons_cargado = st.number_input("Consumo cargado (L/km):", value=0.52, label_visibility="collapsed")
+        cons_vacio = st.number_input("Consumo vacío (L/km):", value=0.30, label_visibility="collapsed")
+        
         mostrar_rutas = st.checkbox("Mostrar líneas de flujo", value=True)
-        mostrar_radios = st.checkbox("Mostrar radios desde Actual RS", value=False)
+        mostrar_radios = st.checkbox("Mostrar radios", value=False)
 
-    # 5. DATOS DEL ESCENARIO Y CÁLCULOS (Lógica original intacta)
-    generacion_total = float(escenario_row["GENERACION_TOTAL"])
-    ton_relleno = float(escenario_row["TON_A_RELLENO"])
-    ton_et = float(escenario_row["TON_A_ET"])
-    ton_planta = float(escenario_row["TON_A_PLANTA"])
-
+    # 5. CÁLCULOS LOGÍSTICOS
     col_ton = "TON_ACTUAL_DIA" if generacion_total == 600 else "TON_PROYECTADA_800"
     df_origenes = df_residuos[["ORIGEN", col_ton]].copy()
     df_origenes.columns = ["ORIGEN", "TON_DIA"]
@@ -195,96 +206,78 @@ try:
     km_totales_dia = distancia_viaje_redondo * viajes_dia
     costo_total_dia = costo_por_viaje * viajes_dia
 
-    porcentaje_relleno = ton_relleno / generacion_total if generacion_total else 0
-    porcentaje_et = ton_et / generacion_total if generacion_total else 0
-    porcentaje_planta = ton_planta / generacion_total if generacion_total else 0
-    porcentaje_valorizacion = porcentaje_planta
+    # 6. MAPA (Área central)
+    if not es_actual:
+        rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+        map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
+    else:
+        map_center = [-31.62, -60.75]
 
-    # 6. LAYOUT PRINCIPAL: MAPA Y RESUMEN
-    col_mapa, col_resumen = st.columns([3, 1])
+    m = folium.Map(location=map_center, zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
 
-    with col_mapa:
-        # El mapa se centra dinámicamente según la ubicación
-        if not es_actual:
-            rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
-        else:
-            map_center = [-31.62, -60.75]
+    def agregar_etiqueta_mapa(lat, lon, texto):
+        folium.Marker([lat, lon], icon=folium.DivIcon(html=f'<div style="font-size: 11px; font-weight: 700; color: #1f2937; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(31, 41, 55, 0.25); border-radius: 6px; padding: 2px 5px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transform: translate(15px, -10px);">{texto}</div>')).add_to(m)
 
-        m = folium.Map(location=map_center, zoom_start=11, tiles=tile_provider, attr=attr)
+    if mostrar_radios:
+        centro = df_infra[df_infra["ID"] == "ET1"].iloc[0]
+        for radio, color in [(20000, "blue"), (35000, "orange"), (50000, "red")]:
+            folium.Circle([centro["LATITUD"], centro["LONGITUD"]], radius=radio, color=color, fill=True, fill_opacity=0.06).add_to(m)
 
-        def agregar_etiqueta_mapa(lat, lon, texto):
-            folium.Marker([lat, lon], icon=folium.DivIcon(html=f'<div style="font-size: 11px; font-weight: 700; color: #1f2937; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(31, 41, 55, 0.25); border-radius: 6px; padding: 2px 5px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transform: translate(15px, -10px);">{texto}</div>')).add_to(m)
+    df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
+    for _, r in df_infra_mapa.iterrows():
+        if pd.isna(r["LATITUD"]) or pd.isna(r["LONGITUD"]): continue
+        color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
+        icon = "bolt" if color == "green" else "truck"
+        folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=f"{r['ID']} - {r['NOMBRE']}", popup=f"{r['NOMBRE']}<br>Tipo: {r['TIPO']}<br>Capacidad: {r['CAPACIDAD_TN_DIA']} t/día", icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
+        agregar_etiqueta_mapa(r["LATITUD"], r["LONGITUD"], r["NOMBRE"])
 
-        if mostrar_radios:
-            centro = df_infra[df_infra["ID"] == "ET1"].iloc[0]
-            for radio, color in [(20000, "blue"), (35000, "orange"), (50000, "red")]:
-                folium.Circle([centro["LATITUD"], centro["LONGITUD"]], radius=radio, color=color, fill=True, fill_opacity=0.06).add_to(m)
+    if not es_actual:
+        rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+        folium.Marker([rr["LATITUD"], rr["LONGITUD"]], tooltip=f"Futuro RS - {rr['NOMBRE']}", popup=f"Futuro Relleno Sanitario<br>{rr['NOMBRE']}", icon=folium.Icon(color="red", icon="flag", prefix="fa")).add_to(m)
+        agregar_etiqueta_mapa(rr["LATITUD"], rr["LONGITUD"], rr["NOMBRE"])
 
-        df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
-        for _, r in df_infra_mapa.iterrows():
-            if pd.isna(r["LATITUD"]) or pd.isna(r["LONGITUD"]): continue
-            color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
-            icon = "bolt" if color == "green" else "truck"
-            folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=f"{r['ID']} - {r['NOMBRE']}", popup=f"{r['NOMBRE']}<br>Tipo: {r['TIPO']}<br>Capacidad: {r['CAPACIDAD_TN_DIA']} t/día", icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
-            agregar_etiqueta_mapa(r["LATITUD"], r["LONGITUD"], r["NOMBRE"])
-
-        if not es_actual:
+    if mostrar_rutas:
+        origenes_coords = df_dist[df_dist["TIPO_FLUJO"] == "Origen → Futuro RS"][["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
+        if es_actual:
+            destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
+            for _, o in origenes_coords.iterrows():
+                AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [destino["LATITUD"], destino["LONGITUD"]]], delay=1000, color="blue", weight=4).add_to(m)
+        elif escenario_sel == "Futuro 800 - Alternativa 1":
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            folium.Marker([rr["LATITUD"], rr["LONGITUD"]], tooltip=f"Futuro RS - {rr['NOMBRE']}", popup=f"Futuro Relleno Sanitario<br>{rr['NOMBRE']}", icon=folium.Icon(color="red", icon="flag", prefix="fa")).add_to(m)
-            agregar_etiqueta_mapa(rr["LATITUD"], rr["LONGITUD"], rr["NOMBRE"])
-
-        if mostrar_rutas:
-            origenes_coords = df_dist[df_dist["TIPO_FLUJO"] == "Origen → Futuro RS"][["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
-            if es_actual:
-                destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
+            for _, o in origenes_coords.iterrows():
+                AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="red", weight=4).add_to(m)
+        else:
+            distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
+            et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
+            for et_id in et_ids:
+                et = df_infra[df_infra["ID"] == et_id].iloc[0]
                 for _, o in origenes_coords.iterrows():
-                    AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [destino["LATITUD"], destino["LONGITUD"]]], delay=1000, color="blue", weight=4).add_to(m)
-            elif escenario_sel == "Futuro 800 - Alternativa 1":
+                    AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [et["LATITUD"], et["LONGITUD"]]], delay=1000, color="blue", weight=3).add_to(m)
                 rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+                AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="red", weight=5).add_to(m)
+            if escenario_sel == "Futuro 800 - Alternativa 3":
+                planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for _, o in origenes_coords.iterrows():
-                    AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="red", weight=4).add_to(m)
-            else:
-                distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
-                et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
-                for et_id in et_ids:
-                    et = df_infra[df_infra["ID"] == et_id].iloc[0]
-                    for _, o in origenes_coords.iterrows():
-                        AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [et["LATITUD"], et["LONGITUD"]]], delay=1000, color="blue", weight=3).add_to(m)
-                    rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-                    AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="red", weight=5).add_to(m)
-                if escenario_sel == "Futuro 800 - Alternativa 3":
-                    planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
-                    for _, o in origenes_coords.iterrows():
-                        AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [planta["LATITUD"], planta["LONGITUD"]]], delay=1000, color="green", weight=4).add_to(m)
+                    AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [planta["LATITUD"], planta["LONGITUD"]]], delay=1000, color="green", weight=4).add_to(m)
 
-        # CAPAS WMS SANTA FE
-        wms_url = "https://aswe.santafe.gov.ar/idesf/wms"
-        capas_wms = [
-            {"layers": "areas_de_riesgo_hidrico", "name": "🌊 Riesgo hídrico"},
-            {"layers": "ma_otbn_2021", "name": "🌳 Bosques nativos"},
-            {"layers": "ind_produccion", "name": "🌾 Productividad del suelo"},
-        ]
-        for capa in capas_wms:
-            folium.raster_layers.WmsTileLayer(url=wms_url, layers=capa["layers"], name=capa["name"], fmt="image/png", transparent=True, overlay=True, control=True, show=False).add_to(m)
+    # CAPAS WMS SANTA FE
+    wms_url = "https://aswe.santafe.gov.ar/idesf/wms"
+    capas_wms = [
+        {"layers": "areas_de_riesgo_hidrico", "name": "🌊 Riesgo hídrico"},
+        {"layers": "ma_otbn_2021", "name": "🌳 Bosques nativos"},
+        {"layers": "ind_produccion", "name": "🌾 Productividad del suelo"},
+    ]
+    for capa in capas_wms:
+        folium.raster_layers.WmsTileLayer(url=wms_url, layers=capa["layers"], name=capa["name"], fmt="image/png", transparent=True, overlay=True, control=True, show=False).add_to(m)
 
-        folium.LayerControl(collapsed=False).add_to(m)
+    folium.LayerControl(collapsed=False).add_to(m)
 
-        # Renderizamos el mapa (Altura ajustada para pantalla)
-        st_folium(m, width="100%", height=480, key="mapa_modelo_nuevo")
-
-    with col_resumen:
-        st.markdown("### 📊 Resumen")
-        # Cuadros apilados verticalmente
-        st.metric("Generación total", f"{generacion_total:.0f} t/día", border=True)
-        st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{porcentaje_relleno:.1%}", border=True)
-        st.metric("A ET", f"{ton_et:.0f} t/día", f"{porcentaje_et:.1%}", border=True)
-        st.metric("A Planta Energía", f"{ton_planta:.0f} t/día", f"{porcentaje_planta:.1%}", border=True)
-        st.metric("Valorización energética", f"{porcentaje_valorizacion:.1%}", border=True)
+    # Renderizar Mapa (Altura ajustada para que quepa la pantalla)
+    st_folium(m, width="100%", height=480, key="mapa_modelo_nuevo")
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 
-    # 7. INDICADORES LOGÍSTICOS (Simétricos abajo)
+    # 7. INDICADORES LOGÍSTICOS (Debajo del mapa, simétricos)
     st.markdown("### 🚚 Indicadores logísticos estimados")
     
     g1, g2, g3, g4, g5, g6 = st.columns(6)
