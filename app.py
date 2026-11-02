@@ -9,57 +9,57 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS AGRESIVO para compactar todo al extremo
+# 2. CSS Ajustado
 st.markdown("""
 <style>
-    /* Ocultar barra superior y pie de página de Streamlit */
+    /* Ocultar barra superior y pie de página */
     header { visibility: hidden; }
     footer { visibility: hidden; }
     
-    /* Reducir márgenes al mínimo en la página principal */
+    /* Márgenes mínimos */
     .block-container {
-        padding-top: 0.5rem !important;
+        padding-top: 0.2rem !important;
         padding-bottom: 0rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
         max-width: 100% !important;
     }
     
-    /* Títulos más compactos */
-    h3 { margin-top: 0rem !important; margin-bottom: 0.2rem !important; font-size: 1.2rem !important; padding-top: 0 !important; }
+    /* Títulos muy compactos */
+    h3 { margin-top: 0rem !important; margin-bottom: 0.2rem !important; font-size: 1.1rem !important; padding-top: 0 !important; }
     
-    /* Estilo general de las métricas (abajo) */
+    /* --- MÉTRICAS DE ABAJO (Ultra chatas) --- */
     [data-testid="stMetric"] { 
-        padding: 5px 10px !important; 
+        padding: 2px 8px !important; 
         background-color: #f0f2f6; 
-        border-radius: 8px; 
+        border-radius: 6px; 
         border: 1px solid #d1d5db; 
-        min-height: 55px !important;
+        min-height: 45px !important; /* Altura mínima forzada */
     }
-    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; }
-    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.75rem !important; white-space: nowrap; }
+    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; margin-top: -2px !important; }
+    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.7rem !important; white-space: nowrap; margin-bottom: -5px !important; }
     
-    /* --- CONFIGURACIÓN DEL SIDEBAR IZQUIERDO --- */
+    /* --- SIDEBAR IZQUIERDO --- */
     [data-testid="stSidebar"] {
-        min-width: 320px !important;
-        max-width: 320px !important;
+        min-width: 300px !important;
+        max-width: 300px !important;
     }
-    /* Eliminar los espacios en blanco entre los widgets */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         gap: 0.1rem !important; 
     }
-    /* Hacer las métricas del sidebar ultra compactas */
     [data-testid="stSidebar"] [data-testid="stMetric"] { 
         padding: 2px 10px !important; 
         min-height: 40px !important;
         margin-bottom: 0px !important;
     }
-    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
-    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 0.75rem !important; }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1rem !important; }
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 0.7rem !important; }
     
-    /* Compactar los selectores */
-    [data-testid="stSidebar"] .stSelectbox { margin-bottom: -10px !important; }
+    [data-testid="stSidebar"] .stSelectbox { margin-bottom: -15px !important; }
     [data-testid="stSidebar"] hr { margin: 0.5rem 0 !important; }
+    
+    /* Forzar que el mapa no se colapse */
+    iframe { min-height: 460px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,7 +101,6 @@ try:
     df_dist["KM_ESTIMADO"] = df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"]
     df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_ESTIMADO"])
 
-    # PARÁMETROS FIJOS
     capacidad_t = 30
     precio_litro = 1100.0
     cons_cargado = 0.52
@@ -109,7 +108,7 @@ try:
     mostrar_rutas = True
     mostrar_radios = False
 
-    # 4. SIDEBAR (Controles + Resumen apilado)
+    # 4. SIDEBAR
     with st.sidebar:
         st.markdown("#### 📍 Escenario operativo")
         escenarios = df_escenarios["ESCENARIO"].dropna().tolist()
@@ -128,7 +127,6 @@ try:
 
         st.markdown("---")
         
-        # CÁLCULOS DEL ESCENARIO
         generacion_total = float(escenario_row["GENERACION_TOTAL"])
         ton_relleno = float(escenario_row["TON_A_RELLENO"])
         ton_et = float(escenario_row["TON_A_ET"])
@@ -138,7 +136,6 @@ try:
         porcentaje_planta = ton_planta / generacion_total if generacion_total else 0
         porcentaje_valorizacion = porcentaje_planta
 
-        # RESUMEN APILADO (Ultra compacto)
         st.markdown("#### 📊 Resumen")
         st.metric("Generación total", f"{generacion_total:.0f} t/día", border=True)
         st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{porcentaje_relleno:.1%}", border=True)
@@ -233,7 +230,7 @@ try:
     km_totales_dia = distancia_viaje_redondo * viajes_dia
     costo_total_dia = costo_por_viaje * viajes_dia
 
-    # 6. MAPA (Altura reducida a 400 para dejar espacio abajo)
+    # 6. MAPA (Altura 460)
     if not es_actual:
         rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
         map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
@@ -298,10 +295,10 @@ try:
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    # MAPA (Altura 400 para que quepa todo abajo)
-    st_folium(m, width="100%", height=400, key="mapa_modelo_nuevo")
+    # MAPA
+    st_folium(m, width="100%", height=460, key="mapa_modelo_nuevo")
 
-    # 7. INDICADORES LOGÍSTICOS (Abajo, ajustados)
+    # 7. INDICADORES LOGÍSTICOS
     st.markdown("### 🚚 Indicadores logísticos estimados")
     
     g1, g2, g3, g4, g5, g6 = st.columns(6)
