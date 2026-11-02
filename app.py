@@ -9,45 +9,56 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS AGRESIVO para compactar todo y evitar scroll
+# 2. CSS AGRESIVO para compactar todo al extremo
 st.markdown("""
 <style>
     /* Ocultar barra superior de Streamlit */
     header { visibility: hidden; }
     
-    /* Reducir márgenes al mínimo */
+    /* Reducir márgenes al mínimo en la página principal */
     .block-container {
         padding-top: 0.5rem !important;
         padding-bottom: 0rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
+        max-width: 100% !important;
     }
     
     /* Título más chico */
-    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.3rem !important; }
+    h3 { margin-top: 0rem !important; margin-bottom: 0.5rem !important; font-size: 1.2rem !important; }
     
     /* Estilo general de las métricas (abajo) */
     [data-testid="stMetric"] { 
-        padding: 5px 10px !important; 
+        padding: 8px 12px !important; 
         background-color: #f0f2f6; 
         border-radius: 8px; 
         border: 1px solid #d1d5db; 
         min-height: 70px !important;
     }
-    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.1rem !important; }
-    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.75rem !important; white-space: nowrap; }
+    [data-testid="stMetricValue"] { color: #1a1a1a !important; font-weight: bold !important; font-size: 1.3rem !important; }
+    [data-testid="stMetricLabel"] { color: #4a4a4a !important; font-size: 0.8rem !important; white-space: nowrap; }
     
-    /* Hacer las métricas del SIDEBAR ultra chiquitas para que entren todas */
-    [data-testid="stSidebar"] [data-testid="stMetric"] { 
-        padding: 2px 8px !important; 
-        min-height: 45px !important;
-        margin-bottom: 2px !important;
+    /* --- CONFIGURACIÓN DEL SIDEBAR IZQUIERDO --- */
+    [data-testid="stSidebar"] {
+        min-width: 320px !important;
+        max-width: 320px !important;
     }
-    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1rem !important; }
-    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 0.65rem !important; }
+    /* Eliminar los espacios en blanco entre los widgets */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 0.1rem !important; 
+    }
+    /* Hacer las métricas del sidebar ultra compactas */
+    [data-testid="stSidebar"] [data-testid="stMetric"] { 
+        padding: 2px 10px !important; 
+        min-height: 40px !important;
+        margin-bottom: 0px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 0.75rem !important; }
     
-    /* Compactar inputs del sidebar */
-    [data-testid="stSidebar"] .stSelectbox { margin-bottom: -15px; }
+    /* Compactar los selectores */
+    [data-testid="stSidebar"] .stSelectbox { margin-bottom: -10px !important; }
+    [data-testid="stSidebar"] hr { margin: 0.5rem 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -89,16 +100,13 @@ try:
     df_dist["KM_ESTIMADO"] = df_dist["KM_LINEAL"] * df_dist["FACTOR_RUTA"]
     df_dist["KM_USADO"] = df_dist["KM_RUTA_REAL"].fillna(df_dist["KM_OPERATIVO"]).fillna(df_dist["KM_ESTIMADO"])
 
-    # ==========================================
-    # PARÁMETROS FIJOS (antes en la barra lateral)
-    # ==========================================
+    # PARÁMETROS FIJOS
     capacidad_t = 30
     precio_litro = 1100.0
     cons_cargado = 0.52
     cons_vacio = 0.30
     mostrar_rutas = True
     mostrar_radios = False
-    # ==========================================
 
     # 4. SIDEBAR (Controles + Resumen apilado)
     with st.sidebar:
@@ -129,7 +137,7 @@ try:
         porcentaje_planta = ton_planta / generacion_total if generacion_total else 0
         porcentaje_valorizacion = porcentaje_planta
 
-        # RESUMEN APILADO
+        # RESUMEN APILADO (Ultra compacto)
         st.markdown("#### 📊 Resumen")
         st.metric("Generación total", f"{generacion_total:.0f} t/día", border=True)
         st.metric("A Futuro RS", f"{ton_relleno:.0f} t/día", f"{porcentaje_relleno:.1%}", border=True)
@@ -224,7 +232,7 @@ try:
     km_totales_dia = distancia_viaje_redondo * viajes_dia
     costo_total_dia = costo_por_viaje * viajes_dia
 
-    # 6. MAPA
+    # 6. MAPA (Altura aumentada a 530)
     if not es_actual:
         rr_center = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
         map_center = [rr_center["LATITUD"], rr_center["LONGITUD"]]
@@ -289,12 +297,13 @@ try:
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    # MAPA
-    st_folium(m, width="100%", height=360, key="mapa_modelo_nuevo")
+    # MAPA (Altura 530 para que ocupe más pantalla)
+    st_folium(m, width="100%", height=530, key="mapa_modelo_nuevo")
 
-    st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
+    # Espaciador para empujar los indicadores hacia abajo
+    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
 
-    # 7. INDICADORES LOGÍSTICOS (Debajo del mapa, simétricos)
+    # 7. INDICADORES LOGÍSTICOS (Abajo)
     st.markdown("### 🚚 Indicadores logísticos estimados")
     
     g1, g2, g3, g4, g5, g6 = st.columns(6)
