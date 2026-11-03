@@ -28,10 +28,14 @@ st.markdown("""
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
+    
+    /* Fuerza bruta para el botón Manage app */
     iframe[title="Manage app"] { display: none !important; }
     iframe[title="streamlit_app"] { display: none !important; }
     div[class^="stAppDeployButton"] { display: none !important; }
     div[class^="stStatusWidget"] { display: none !important; }
+    [data-testid="stBottom"] { display: none !important; }
+    .stDeployButton { display: none !important; }
     
     .block-container {
         padding-top: 0rem !important;
@@ -106,13 +110,13 @@ st.markdown("""
     .kpi-card {
         background: #ffffff;
         border-radius: 8px;
-        padding: 12px 15px;
+        padding: 10px 15px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         border: 1px solid #e2e8f0;
     }
     .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 4px; }
-    .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; margin-top: 4px; }
+    .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
+    .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -259,7 +263,7 @@ try:
     # 7. ÁREA PRINCIPAL
     st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    # MAPA EXTENDIDO (Zoom 10, centro ajustado)
+    # MAPA (height=480 para que las tarjetas de abajo entren completas)
     m = folium.Map(location=[-31.60, -60.72], zoom_start=10, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
@@ -363,11 +367,11 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # MAPA EXTENDIDO HACIA ABAJO (Height=600)
-    st_folium(m, width="100%", height=600, key="mapa_encuentro", returned_objects=[])
+    # Altura reducida a 480 para que los KPIs entren completos
+    st_folium(m, width="100%", height=480, key="mapa_encuentro", returned_objects=[])
 
     # KPIs Inferiores (Estilo SENTRA)
-    st.markdown("<div style='margin-top: 10px; padding-bottom: 0px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 10px; padding-bottom: 10px;'></div>", unsafe_allow_html=True)
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
     with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
