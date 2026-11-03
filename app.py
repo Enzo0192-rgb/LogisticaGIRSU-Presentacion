@@ -9,37 +9,41 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS (Header Blanco, Título Negro, sin márgenes)
+# 2. CSS (Forzando colores blancos y negros)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Ocultar menús y footers */
+    /* Ocultar menús y footers de Streamlit */
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { visibility: hidden !important; }
     [data-testid="stStatusWidget"] { visibility: hidden !important; }
     
+    /* Forzar fondo blanco general para la app */
+    .stApp { background-color: #f8fafc !important; }
+
     /* Subir todo el contenido */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
         padding-left: 0rem !important;
         padding-right: 0rem !important;
-        margin-top: -50px !important;
+        margin-top: 0rem !important;
         max-width: 100% !important;
     }
 
-    /* --- BARRA SUPERIOR (Header Blanco) --- */
+    /* --- BARRA SUPERIOR (Header Blanco Forzado) --- */
     .top-navbar {
-        background-color: #ffffff;
-        padding: 8px 25px;
+        background-color: #ffffff !important; /* Fondo blanco obligatorio */
+        padding: 10px 25px;
         display: flex;
         align-items: center;
-        border-bottom: 1px solid #e2e8f0;
-        height: 70px;
+        border-bottom: 2px solid #e2e8f0;
+        height: 75px;
+        margin-bottom: 5px;
     }
     
     .main-title {
@@ -86,22 +90,23 @@ st.markdown("""
 
     /* --- ÁREA DEL MAPA Y KPIs --- */
     .content-padding {
-        padding-left: 20px;
-        padding-right: 20px;
-        padding-top: 10px;
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 0px;
+        padding-bottom: 10px;
     }
 
     .kpi-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        padding: 10px 15px;
+        padding: 8px 12px;
         text-align: left;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .kpi-label { color: #64748b; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
-    .kpi-value { color: #0f172a; font-size: 1.3rem; font-weight: 800; }
-    .kpi-value-blue { color: #2563eb; font-size: 1.3rem; font-weight: 800; }
+    .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+    .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; }
+    .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -113,9 +118,10 @@ col_logo, col_title = st.columns([1.5, 6])
 
 with col_logo:
     if logo_path.exists():
+        # Aquí se carga la imagen que subas a GitHub
         st.image(str(logo_path), width=180)
     else:
-        # Fallback de logo si no está la imagen
+        # Respaldo por si no se subió la imagen
         st.markdown("""
         <div style="display: flex; align-items: center; gap: 8px; padding-top: 5px;">
             <svg style="width: 35px; height: 35px;" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -256,7 +262,7 @@ try:
         if "map_center" not in st.session_state:
             st.session_state.map_center = [-31.63, -60.75]
         if "map_zoom" not in st.session_state:
-            st.session_state.map_zoom = 11
+            st.session_state.map_zoom = 12
 
         m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap", attr="OpenStreetMap")
 
@@ -268,13 +274,12 @@ try:
             "Sauce Viejo": (-31.770770, -60.838399)
         }
 
-        # Mapeo de ciudades a su ET más cercana para Alternativas 2 y 3
         ciudad_a_et = {
             "Santa Fe": "ET1",
             "Santo Tomé": "ET2",
             "San José del Rincón": "ET4",
             "Recreo": "ET3",
-            "Sauce Viejo": "ET2" # Sauce Viejo se asigna a Santo Tomé por cercanía
+            "Sauce Viejo": "ET2"
         }
 
         # A. Opciones de Relleno
@@ -332,24 +337,19 @@ try:
 
         # C. FLUJOS LOGÍSTICOS
         if es_actual:
-            # Actual: Todo va directo a ET1 desde las ciudades
             destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [destino["LATITUD"], destino["LONGITUD"]]], delay=800, color="#ef4444", weight=5, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
         
         elif escenario_sel == "Futuro 800 - Alternativa 1":
-            # Alt 1: Flujo directo Ciudades -> Relleno
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
 
         else:
-            # Alt 2 y 3: Flujo Secundario (Ciudad -> ET) y Principal (ET -> Relleno)
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            
-            # Obtener qué ETs están activas en este escenario
             distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
             ets_activas = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
             
@@ -357,16 +357,15 @@ try:
                 if et_id not in ets_activas:
                     continue
                 
-                # 1. Flujo Secundario (Ciudad -> ET)
+                # Flujo Secundario
                 lat_c, lon_c = centros_urbanos[ciudad]
                 et = df_infra[df_infra["ID"] == et_id].iloc[0]
                 AntPath(locations=[[lat_c, lon_c], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=3, opacity=0.6, dash_array="5, 5").add_to(m)
                 folium.CircleMarker([lat_c, lon_c], radius=6, color="#3b82f6", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
                 
-                # 2. Flujo Principal (ET -> Relleno)
+                # Flujo Principal
                 AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
 
-            # 3. Flujo a Planta de Energía (Alt 3)
             if escenario_sel == "Futuro 800 - Alternativa 3":
                 planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for ciudad, (lat, lon) in centros_urbanos.items():
@@ -383,14 +382,15 @@ try:
 
         folium.LayerControl(collapsed=True, position='topright').add_to(m)
         
-        map_data = st_folium(m, width="100%", height=520, key="mapa_encuentro")
+        # MAPA EXTENDIDO (Height=650)
+        map_data = st_folium(m, width="100%", height=650, key="mapa_encuentro")
 
         if map_data and map_data.get("center"):
             st.session_state.map_center = [map_data["center"]["lat"], map_data["center"]["lng"]]
             st.session_state.map_zoom = map_data["zoom"]
 
-        # KPIs Inferiores
-        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+        # KPIs Inferiores (Ajustados para no cortarse)
+        st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
         with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
