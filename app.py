@@ -5,7 +5,6 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 import math
 from pathlib import Path
-from datetime import datetime
 import base64
 
 # 1. Configuración de página
@@ -24,10 +23,13 @@ st.markdown("""
     footer { display: none !important; }
     #MainMenu { display: none !important; }
     
-    /* Ocultar el botón "Manage app" y la flecha de colapsar sidebar */
+    /* Ocultar el botón "Manage app", la flecha de colapsar y el texto "keyboard_double" */
     [data-testid="stStatusWidget"] { display: none !important; }
     [data-testid="stAppDeployButton"] { display: none !important; }
+    [data-testid="stToolbar"] { display: none !important; }
+    [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
+    button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
     
     /* Contenedor principal sin márgenes */
     .block-container {
@@ -44,7 +46,6 @@ st.markdown("""
         background-color: #050a14;
         padding: 0px 25px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #1e293b;
         height: 70px;
@@ -56,12 +57,6 @@ st.markdown("""
         font-weight: 800;
         margin: 0;
         letter-spacing: 0.5px;
-    }
-    .header-right {
-        color: #94a3b8;
-        font-size: 0.85rem;
-        text-align: right;
-        line-height: 1.2;
     }
     
     /* --- SIDEBAR ESTILO SENTRA --- */
@@ -112,9 +107,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. HEADER ESTILO SENTRA
+# 3. HEADER ESTILO SENTRA (Sin fecha ni hora)
 logo_path = Path(__file__).parent / "data_encuentro.png"
-now = datetime.now().strftime("%d-%b, %H:%M %p")
 
 if logo_path.exists():
     with open(logo_path, "rb") as f:
@@ -131,10 +125,6 @@ st.markdown(f"""
     <div class="header-left">
         {logo_html}
         <h1 class="header-title">DASHBOARD de alternativas</h1>
-    </div>
-    <div class="header-right">
-        Sistema de Gestión Integral<br>
-        <b>{now}</b>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -262,7 +252,6 @@ try:
     if "map_zoom" not in st.session_state:
         st.session_state.map_zoom = 12
 
-    # CAMBIO CLAVE: Usar OpenStreetMap en lugar de CartoDB para evitar el "API KEY REQUIRED"
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
