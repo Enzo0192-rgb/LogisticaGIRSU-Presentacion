@@ -17,18 +17,26 @@ st.markdown("""
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Limpieza total de Streamlit */
+    /* Eliminar la franja blanca superior */
+    [data-testid="stAppViewContainer"] { margin-top: -1rem !important; }
+    [data-testid="stHeader"] { display: none !important; }
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
+    
+    /* Eliminar cualquier botón de Streamlit, incluido Manage app */
     [data-testid="stStatusWidget"] { display: none !important; }
     [data-testid="stAppDeployButton"] { display: none !important; }
     [data-testid="stToolbar"] { display: none !important; }
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
+    iframe[title="Manage app"] { display: none !important; }
+    iframe[title="streamlit_app"] { display: none !important; }
+    div[class^="stAppDeployButton"] { display: none !important; }
+    div[class^="stStatusWidget"] { display: none !important; }
     
-    /* Eliminar la barra negra inferior y forzar fondo claro */
+    /* Fondo general claro */
     [data-testid="stBottom"] { display: none !important; }
     .stApp { background-color: #f1f5f9 !important; }
     
@@ -50,6 +58,7 @@ st.markdown("""
         align-items: center;
         border-bottom: 1px solid #1e293b;
         height: 70px;
+        margin-top: 0rem !important;
     }
     .header-left { display: flex; align-items: center; gap: 20px; height: 100%; }
     .header-title {
@@ -106,18 +115,18 @@ st.markdown("""
         background: #ffffff;
         border-radius: 8px;
         padding: 12px 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3); /* Sombra fuerte para flotar sobre el mapa */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         border: 1px solid #e2e8f0;
     }
     .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
     .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
 
-    /* TRUCO FINAL: Subir el contenedor de las columnas de Streamlit */
+    /* Ajuste: Subir las tarjetas un poco menos (-50px) para que queden más abajo */
     div[data-testid="stHorizontalBlock"] {
-        margin-top: -80px !important; /* Sube las tarjetas sobre el mapa */
+        margin-top: -50px !important; 
         position: relative;
-        z-index: 9999; /* Asegura que estén por encima del iframe del mapa */
+        z-index: 9999;
         padding-left: 20px !important;
         padding-right: 20px !important;
     }
@@ -371,10 +380,10 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # MAPA (600PX INTACTO)
+    # MAPA (600PX)
     st_folium(m, width="100%", height=600, key="mapa_encuentro", returned_objects=[])
 
-    # Las tarjetas de abajo. El CSS de arriba se encarga de subirlas sobre el mapa.
+    # Las tarjetas de abajo con margen -50px
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
     with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
