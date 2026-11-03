@@ -14,12 +14,10 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
     
-    /* Reset total */
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     header { display: none !important; }
     footer { display: none !important; }
     
-    /* Quitar TODOS los márgenes para que el mapa ocupe toda la pantalla */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
@@ -36,7 +34,7 @@ st.markdown("""
         display: flex;
         align-items: center;
         border-bottom: 2px solid #1e293b;
-        height: 70px; /* Altura fija para controlar el espacio */
+        height: 70px;
     }
     
     .main-title {
@@ -45,7 +43,7 @@ st.markdown("""
         font-weight: 800;
         margin: 0;
         letter-spacing: 1px;
-        text-shadow: 0px 2px 4px rgba(0,0,0,0.5); /* Sombra para que resalte */
+        text-shadow: 0px 2px 4px rgba(0,0,0,0.5);
     }
     
     /* --- SIDEBAR --- */
@@ -113,7 +111,8 @@ with col_logo:
     if logo_path.exists():
         st.image(str(logo_path), width=180)
     else:
-        st.markdown("<div style='background:white; padding:5px 10px; border-radius:5px; color:#c1121f; font-weight:800; font-size:1.2rem; display:inline-block;'>DATA ENCUENTRO</div>", unsafe_allow_html=True)
+        # Un fallback más elegante por si no suben la imagen
+        st.markdown("<div style='background:transparent; padding:5px 10px; border-radius:5px; color:#c1121f; font-weight:800; font-size:1.2rem; display:inline-block; border: 1px solid #c1121f;'>DATA ENCUENTRO</div>", unsafe_allow_html=True)
 
 with col_title:
     st.markdown("<h1 class='main-title'>DASHBOARD de alternativas</h1>", unsafe_allow_html=True)
@@ -203,7 +202,8 @@ try:
         st.markdown("""
         <div class="sidebar-card">
             <div class="sidebar-title">Leyenda</div>
-            <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div> Flujo de Ciudades a Destino</div>
+            <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div> Flujo Directo a Relleno</div>
+            <div class="legend-item"><div class="legend-dot" style="background-color: #3b82f6;"></div> Recolección a ET</div>
             <div class="legend-item"><div class="legend-dot" style="background-color: #10b981;"></div> Flujo a Planta Energía</div>
         </div>
         """, unsafe_allow_html=True)
@@ -238,15 +238,13 @@ try:
         
         m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
 
-        # --- AQUÍ AGREGAMOS SAUCE VIEJO ---
         centros_urbanos = {
             "Santa Fe": (-31.6333, -60.7),
             "Santo Tomé": (-31.66, -60.76),
             "Rincón": (-31.63, -60.62),
             "Recreo": (-31.48, -60.75),
-            "Sauce Viejo": (-31.70, -60.82) 
+            "Sauce Viejo": (-31.70, -60.82)
         }
-        # ----------------------------------
 
         # A. Opciones de Relleno (Siempre visibles)
         for _, rr in df_rellenos.iterrows():
@@ -302,22 +300,32 @@ try:
                 ''')
             ).add_to(m)
 
-        # C. FLUJOS LOGÍSTICOS (Desde los centros urbanos)
+        # C. FLUJOS LOGÍSTICOS
         if es_actual:
-            # Escenario Actual: Todo va a la ET1
+            # Actual: Todo va directo a ET1 desde las ciudades
             destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [destino["LATITUD"], destino["LONGITUD"]]], delay=800, color="#ef4444", weight=5, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
         
         else:
-            # Futuro: Todos los flujos van al Relleno Seleccionado
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+            
+            # 1. Flujo Directo: Ciudades -> Relleno (Línea Roja Fuerte)
             for ciudad, (lat, lon) in centros_urbanos.items():
-                AntPath(locations=[[lat, lon], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=5, opacity=0.9).add_to(m)
+                AntPath(locations=[[lat, lon], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
+            
+            # 2. Flujo a ETs: Ciudades -> ET (Línea Azul Punteada - Solo para contexto)
+            if escenario_sel in ["Futuro 800 - Alternativa 2", "Futuro 800 - Alternativa 3"]:
+                distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
+                et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
+                for et_id in et_ids:
+                    et = df_infra[df_infra["ID"] == et_id].iloc[0]
+                    for ciudad, (lat, lon) in centros_urbanos.items():
+                        AntPath(locations=[[lat, lon], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=2, opacity=0.5, dash_array="5, 5").add_to(m)
 
-            # Si es Alternativa 3, agregar flujo a Planta de Energía
+            # 3. Flujo a Planta de Energía
             if escenario_sel == "Futuro 800 - Alternativa 3":
                 planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for ciudad, (lat, lon) in centros_urbanos.items():
