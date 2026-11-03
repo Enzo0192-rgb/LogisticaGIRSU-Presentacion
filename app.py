@@ -9,23 +9,24 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS (Forzando colores blancos y negros)
+# 2. CSS (Forzando colores y eliminando TODOS los bordes)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Ocultar menús y footers de Streamlit */
+    /* Ocultar menús, footers y el botón Manage App de Streamlit */
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { visibility: hidden !important; }
-    [data-testid="stStatusWidget"] { visibility: hidden !important; }
+    [data-testid="stStatusWidget"] { display: none !important; }
+    [data-testid="stAppViewBlockContainer"] { padding-top: 0rem !important; }
     
     /* Forzar fondo blanco general para la app */
     .stApp { background-color: #f8fafc !important; }
 
-    /* Subir todo el contenido */
+    /* Eliminar todos los márgenes posibles de Streamlit */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
@@ -37,18 +38,18 @@ st.markdown("""
 
     /* --- BARRA SUPERIOR (Header Blanco Forzado) --- */
     .top-navbar {
-        background-color: #ffffff !important; /* Fondo blanco obligatorio */
-        padding: 10px 25px;
+        background-color: #ffffff !important;
+        padding: 8px 25px;
         display: flex;
         align-items: center;
-        border-bottom: 2px solid #e2e8f0;
-        height: 75px;
+        border-bottom: 1px solid #e2e8f0;
+        height: 65px; /* Header más fino */
         margin-bottom: 5px;
     }
     
     .main-title {
         color: #0f172a !important; /* Título Negro */
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         font-weight: 900;
         margin: 0;
         letter-spacing: 0.5px;
@@ -58,8 +59,8 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background-color: #0f172a !important;
         border-right: 1px solid #1e293b;
-        min-width: 330px !important;
-        max-width: 330px !important;
+        min-width: 320px !important;
+        max-width: 320px !important;
         padding-top: 1rem;
     }
     [data-testid="stSidebar"] * { color: #e2e8f0 !important; }
@@ -75,38 +76,37 @@ st.markdown("""
         background-color: #1e293b;
         border-radius: 10px;
         padding: 15px;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         border: 1px solid #334155;
     }
     .sidebar-title {
         color: #f8fafc !important;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 700;
         margin-bottom: 10px;
     }
     
-    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; color: #cbd5e1; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.8rem; color: #cbd5e1; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
     /* --- ÁREA DEL MAPA Y KPIs --- */
     .content-padding {
         padding-left: 15px;
         padding-right: 15px;
         padding-top: 0px;
-        padding-bottom: 10px;
     }
 
     .kpi-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 8px 12px;
+        border-radius: 8px;
+        padding: 5px 10px; /* Tarjetas más chatas */
         text-align: left;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
-    .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
-    .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; }
-    .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; }
+    .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0px; }
+    .kpi-value { color: #0f172a; font-size: 1.1rem; font-weight: 800; }
+    .kpi-value-blue { color: #2563eb; font-size: 1.1rem; font-weight: 800; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,20 +118,19 @@ col_logo, col_title = st.columns([1.5, 6])
 
 with col_logo:
     if logo_path.exists():
-        # Aquí se carga la imagen que subas a GitHub
-        st.image(str(logo_path), width=180)
+        st.image(str(logo_path), width=160) # Logo un poco más chico para ahorrar espacio
     else:
-        # Respaldo por si no se subió la imagen
+        # Respaldo
         st.markdown("""
         <div style="display: flex; align-items: center; gap: 8px; padding-top: 5px;">
-            <svg style="width: 35px; height: 35px;" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg style="width: 30px; height: 30px;" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="2" x2="12" y2="22"></line>
                 <line x1="2" y1="12" x2="22" y2="12"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
                 <line x1="18" y1="6" x2="6" y2="18"></line>
             </svg>
-            <span style="color: #c1121f; font-weight: 900; font-size: 1.8rem; letter-spacing: -1px; line-height: 0.9;">
-                DATA<br><span style="font-size: 1rem; letter-spacing: 2px;">ENCUENTRO</span>
+            <span style="color: #c1121f; font-weight: 900; font-size: 1.5rem; letter-spacing: -1px; line-height: 0.9;">
+                DATA<br><span style="font-size: 0.9rem; letter-spacing: 2px;">ENCUENTRO</span>
             </span>
         </div>
         """, unsafe_allow_html=True)
@@ -177,7 +176,7 @@ try:
     with st.sidebar:
         st.markdown("""
         <div class="sidebar-title">Configuración</div>
-        <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 15px; line-height: 1.4;">
+        <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 10px; line-height: 1.3;">
             Seleccione el escenario y la ubicación para visualizar el flujo logístico.
         </div>
         """, unsafe_allow_html=True)
@@ -189,7 +188,7 @@ try:
         if es_actual:
             relleno_sel = "Actual Relleno Sanitario"
             relleno_id = "ET1"
-            st.markdown(f'<div class="sidebar-card" style="text-align:center; padding:10px;"><b>Destino:</b><br>{relleno_sel}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="sidebar-card" style="text-align:center; padding:8px;"><b>Destino:</b><br>{relleno_sel}</div>', unsafe_allow_html=True)
         else:
             relleno_sel = st.selectbox("Futuro Relleno Sanitario", df_rellenos["NOMBRE"].dropna().tolist())
             relleno_id = df_rellenos[df_rellenos["NOMBRE"] == relleno_sel]["ID_RELLENO"].iloc[0]
@@ -200,22 +199,22 @@ try:
         ton_planta = float(escenario_row["TON_A_PLANTA"])
 
         st.markdown(f"""
-        <div class="sidebar-card" style="margin-top: 15px;">
+        <div class="sidebar-card" style="margin-top: 10px;">
             <div class="sidebar-title">Resumen de Flujo</div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 8px 0;">
-                <span style="color:#94a3b8; font-size:0.85rem;">Generación Total</span>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 6px 0;">
+                <span style="color:#94a3b8; font-size:0.8rem;">Generación Total</span>
                 <span style="color:#f8fafc; font-weight:bold;">{generacion_total:.0f} t/día</span>
             </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 8px 0;">
-                <span style="color:#94a3b8; font-size:0.85rem;">A Futuro RS</span>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 6px 0;">
+                <span style="color:#94a3b8; font-size:0.8rem;">A Futuro RS</span>
                 <span style="color:#f8fafc; font-weight:bold;">{ton_relleno:.0f} t/día</span>
             </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 8px 0;">
-                <span style="color:#94a3b8; font-size:0.85rem;">A Estaciones (ET)</span>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 6px 0;">
+                <span style="color:#94a3b8; font-size:0.8rem;">A Estaciones (ET)</span>
                 <span style="color:#f8fafc; font-weight:bold;">{ton_et:.0f} t/día</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                <span style="color:#94a3b8; font-size:0.85rem;">A Planta Energía</span>
+            <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+                <span style="color:#94a3b8; font-size:0.8rem;">A Planta Energía</span>
                 <span style="color:#f8fafc; font-weight:bold;">{ton_planta:.0f} t/día</span>
             </div>
         </div>
@@ -382,8 +381,8 @@ try:
 
         folium.LayerControl(collapsed=True, position='topright').add_to(m)
         
-        # MAPA EXTENDIDO (Height=650)
-        map_data = st_folium(m, width="100%", height=650, key="mapa_encuentro")
+        # MAPA AJUSTADO A LA PANTALLA (Height=440)
+        map_data = st_folium(m, width="100%", height=440, key="mapa_encuentro")
 
         if map_data and map_data.get("center"):
             st.session_state.map_center = [map_data["center"]["lat"], map_data["center"]["lng"]]
