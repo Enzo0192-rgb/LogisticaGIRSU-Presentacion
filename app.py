@@ -15,15 +15,13 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    /* Reset y fuentes */
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Ocultar toda la interfaz nativa de Streamlit */
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
     
-    /* Ocultar el botón "Manage app", la flecha de colapsar y el texto "keyboard_double" */
+    /* Ocultar botones nativos de Streamlit (Manage app, colapsar sidebar, keyboard_double) */
     [data-testid="stStatusWidget"] { display: none !important; }
     [data-testid="stAppDeployButton"] { display: none !important; }
     [data-testid="stToolbar"] { display: none !important; }
@@ -31,7 +29,6 @@ st.markdown("""
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
     
-    /* Contenedor principal sin márgenes */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
@@ -46,6 +43,7 @@ st.markdown("""
         background-color: #050a14;
         padding: 0px 25px;
         display: flex;
+        justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #1e293b;
         height: 70px;
@@ -56,6 +54,13 @@ st.markdown("""
         font-size: 1.6rem;
         font-weight: 800;
         margin: 0;
+        letter-spacing: 0.5px;
+    }
+    .header-right {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-align: right;
         letter-spacing: 0.5px;
     }
     
@@ -107,7 +112,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. HEADER ESTILO SENTRA (Sin fecha ni hora)
+# 3. HEADER ESTILO SENTRA
 logo_path = Path(__file__).parent / "data_encuentro.png"
 
 if logo_path.exists():
@@ -125,6 +130,9 @@ st.markdown(f"""
     <div class="header-left">
         {logo_html}
         <h1 class="header-title">DASHBOARD de alternativas</h1>
+    </div>
+    <div class="header-right">
+        GESTIÓN INTEGRAL DE RESIDUOS
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -247,12 +255,8 @@ try:
     # 7. ÁREA PRINCIPAL
     st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    if "map_center" not in st.session_state:
-        st.session_state.map_center = [-31.63, -60.75]
-    if "map_zoom" not in st.session_state:
-        st.session_state.map_zoom = 12
-
-    m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap", attr="OpenStreetMap")
+    # ELIMINAMOS st.session_state para que el mapa no intente guardar la posición
+    m = folium.Map(location=[-31.63, -60.75], zoom_start=12, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
         "Santa Fe": (-31.616772, -60.701032),
@@ -355,12 +359,8 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # Renderizar Mapa
-    map_data = st_folium(m, width="100%", height=480, key="mapa_encuentro")
-
-    if map_data and map_data.get("center"):
-        st.session_state.map_center = [map_data["center"]["lat"], map_data["center"]["lng"]]
-        st.session_state.map_zoom = map_data["zoom"]
+    # ELIMINAMOS LA CAPTURA DE DATOS DEL MAPA AQUÍ (returned_objects=[])
+    st_folium(m, width="100%", height=480, key="mapa_encuentro", returned_objects=[])
 
     # KPIs Inferiores (Estilo SENTRA)
     st.markdown("<div style='margin-top: 15px; padding-bottom: 15px;'></div>", unsafe_allow_html=True)
