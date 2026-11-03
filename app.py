@@ -6,11 +6,12 @@ from folium.plugins import AntPath
 import math
 from pathlib import Path
 from datetime import datetime
+import base64
 
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS Avanzado (Estilo SENTRA)
+# 2. CSS Avanzado (Estilo SENTRA y limpieza total)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -18,11 +19,15 @@ st.markdown("""
     /* Reset y fuentes */
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Ocultar toda la interfaz de Streamlit */
+    /* Ocultar toda la interfaz nativa de Streamlit */
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
+    
+    /* Ocultar el botón "Manage app" y la flecha de colapsar sidebar */
     [data-testid="stStatusWidget"] { display: none !important; }
+    [data-testid="stAppDeployButton"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
     
     /* Contenedor principal sin márgenes */
     .block-container {
@@ -36,19 +41,19 @@ st.markdown("""
 
     /* --- HEADER ESTILO SENTRA --- */
     .sentra-header {
-        background-color: #050a14; /* Casi negro */
-        padding: 10px 25px;
+        background-color: #050a14;
+        padding: 0px 25px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #1e293b;
         height: 70px;
     }
-    .header-left { display: flex; align-items: center; gap: 20px; }
+    .header-left { display: flex; align-items: center; gap: 20px; height: 100%; }
     .header-title {
         color: #f8fafc;
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 1.6rem;
+        font-weight: 800;
         margin: 0;
         letter-spacing: 0.5px;
     }
@@ -56,11 +61,12 @@ st.markdown("""
         color: #94a3b8;
         font-size: 0.85rem;
         text-align: right;
+        line-height: 1.2;
     }
     
     /* --- SIDEBAR ESTILO SENTRA --- */
     [data-testid="stSidebar"] {
-        background-color: #0b1527 !important; /* Azul marino SENTRA */
+        background-color: #0b1527 !important;
         border-right: 1px solid #1e293b;
         min-width: 340px !important;
         max-width: 340px !important;
@@ -68,7 +74,6 @@ st.markdown("""
     }
     [data-testid="stSidebar"] * { color: #e2e8f0 !important; font-family: 'Inter', sans-serif; }
     
-    /* Selectores */
     [data-testid="stSidebar"] .stSelectbox > div > div {
         background-color: #1a2b4c !important;
         border: 1px solid #2d4063 !important;
@@ -77,7 +82,6 @@ st.markdown("""
         font-weight: 500;
     }
     
-    /* Tarjetas del Sidebar */
     .sentra-card {
         background-color: #122342;
         border-radius: 8px;
@@ -93,15 +97,6 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    
-    /* --- CONTENEDOR DEL MAPA --- */
-    .map-container {
-        padding: 15px 20px;
-        background-color: #f1f5f9; /* Fondo gris claro */
-        height: calc(100vh - 70px);
-        display: flex;
-        flex-direction: column;
-    }
 
     /* Tarjetas KPIs Inferiores */
     .kpi-card {
@@ -114,9 +109,6 @@ st.markdown("""
     .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 4px; }
     .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; margin-top: 4px; }
-
-    /* Ajuste del mapa */
-    iframe { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #cbd5e1; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -124,11 +116,21 @@ st.markdown("""
 logo_path = Path(__file__).parent / "data_encuentro.png"
 now = datetime.now().strftime("%d-%b, %H:%M %p")
 
+# Lógica para el logo (Imagen o SVG de respaldo)
+if logo_path.exists():
+    with open(logo_path, "rb") as f:
+        img_str = base64.b64encode(f.read()).decode()
+    logo_html = f'<img src="data:image/png;base64,{img_str}" height="45">'
+else:
+    logo_html = '''<div style="display:flex; align-items:center; gap:8px;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+        <span style="color:#c1121f; font-weight:900; font-size:1.6rem; line-height:1;">DATA<br><span style="font-size:0.9rem; letter-spacing:2px;">ENCUENTRO</span></span>
+    </div>'''
+
 st.markdown(f"""
 <div class="sentra-header">
     <div class="header-left">
-        <!-- Aquí se inserta el logo -->
-        {f'<img src="data:image/png;base64,{__import__("base64").b64encode(open(logo_path, "rb").read()).decode()}" height="40">' if logo_path.exists() else '<h2 style="color:#c1121f; margin:0; font-weight:900;">DATA ENCUENTRO</h2>'}
+        {logo_html}
         <h1 class="header-title">DASHBOARD de alternativas</h1>
     </div>
     <div class="header-right">
@@ -192,7 +194,6 @@ try:
         ton_et = float(escenario_row["TON_A_ET"])
         ton_planta = float(escenario_row["TON_A_PLANTA"])
 
-        # Tarjeta de Resumen
         st.markdown(f"""
         <div class="sentra-card" style="margin-top: 15px;">
             <div class="sentra-card-title">📊 Resumen de Flujo</div>
@@ -215,7 +216,6 @@ try:
         </div>
         """, unsafe_allow_html=True)
 
-        # Leyenda
         st.markdown("""
         <div class="sentra-card">
             <div class="sentra-card-title">📍 Leyenda</div>
@@ -256,14 +256,14 @@ try:
     costo_diario = costo_viaje * viajes_dia
 
     # 7. ÁREA PRINCIPAL (Mapa y KPIs)
-    st.markdown('<div class="map-container">', unsafe_allow_html=True)
-    
+    # Usamos padding para separar el mapa de los bordes, sin usar "display: flex" para no romper el iframe
+    st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
+
     if "map_center" not in st.session_state:
         st.session_state.map_center = [-31.63, -60.75]
     if "map_zoom" not in st.session_state:
         st.session_state.map_zoom = 12
 
-    # Mapa con estilo limpio (CartoDB Positron)
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron", attr="CartoDB")
 
     centros_urbanos = {
@@ -346,11 +346,9 @@ try:
             lat_c, lon_c = centros_urbanos[ciudad]
             et = df_infra[df_infra["ID"] == et_id].iloc[0]
             
-            # Secundario (Ciudad -> ET)
             AntPath(locations=[[lat_c, lon_c], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=3, opacity=0.6, dash_array="5, 5").add_to(m)
             folium.CircleMarker([lat_c, lon_c], radius=5, color="#3b82f6", fill=True, fill_opacity=0.9).add_to(m)
             
-            # Principal (ET -> Relleno)
             AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
 
         if escenario_sel == "Futuro 800 - Alternativa 3":
@@ -369,15 +367,15 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # Renderizar Mapa
-    map_data = st_folium(m, width="100%", height=450, key="mapa_encuentro")
+    # Renderizar Mapa (Aquí estaba el error, no debe estar dentro de un div flex)
+    map_data = st_folium(m, width="100%", height=480, key="mapa_encuentro")
 
     if map_data and map_data.get("center"):
         st.session_state.map_center = [map_data["center"]["lat"], map_data["center"]["lng"]]
         st.session_state.map_zoom = map_data["zoom"]
 
     # KPIs Inferiores (Estilo SENTRA)
-    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 15px; padding-bottom: 15px;'></div>", unsafe_allow_html=True)
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
     with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
