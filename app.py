@@ -21,13 +21,15 @@ st.markdown("""
     footer { display: none !important; }
     #MainMenu { display: none !important; }
     
-    /* Ocultar botones nativos de Streamlit (Manage app, colapsar sidebar, keyboard_double) */
+    /* Ocultar los botones flotantes nativos de Streamlit (Manage app, colapsar sidebar) */
     [data-testid="stStatusWidget"] { display: none !important; }
     [data-testid="stAppDeployButton"] { display: none !important; }
     [data-testid="stToolbar"] { display: none !important; }
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
+    div[class^="stAppDeployButton"] { display: none !important; }
+    div[class^="stStatusWidget"] { display: none !important; }
     
     .block-container {
         padding-top: 0rem !important;
@@ -255,8 +257,8 @@ try:
     # 7. ÁREA PRINCIPAL
     st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    # ELIMINAMOS st.session_state para que el mapa no intente guardar la posición
-    m = folium.Map(location=[-31.63, -60.75], zoom_start=12, tiles="OpenStreetMap", attr="OpenStreetMap")
+    # Ajuste de apertura: zoom_start=11 y height=510
+    m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
         "Santa Fe": (-31.616772, -60.701032),
@@ -359,8 +361,8 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # ELIMINAMOS LA CAPTURA DE DATOS DEL MAPA AQUÍ (returned_objects=[])
-    st_folium(m, width="100%", height=480, key="mapa_encuentro", returned_objects=[])
+    # MAPA MÁS ALTO (height=510)
+    st_folium(m, width="100%", height=510, key="mapa_encuentro", returned_objects=[])
 
     # KPIs Inferiores (Estilo SENTRA)
     st.markdown("<div style='margin-top: 15px; padding-bottom: 15px;'></div>", unsafe_allow_html=True)
