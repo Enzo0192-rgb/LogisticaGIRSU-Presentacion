@@ -116,7 +116,6 @@ st.markdown("""
 logo_path = Path(__file__).parent / "data_encuentro.png"
 now = datetime.now().strftime("%d-%b, %H:%M %p")
 
-# Lógica para el logo (Imagen o SVG de respaldo)
 if logo_path.exists():
     with open(logo_path, "rb") as f:
         img_str = base64.b64encode(f.read()).decode()
@@ -255,8 +254,7 @@ try:
     costo_viaje = ((km_directo * cons_cargado) + (km_directo * cons_vacio)) * precio_litro
     costo_diario = costo_viaje * viajes_dia
 
-    # 7. ÁREA PRINCIPAL (Mapa y KPIs)
-    # Usamos padding para separar el mapa de los bordes, sin usar "display: flex" para no romper el iframe
+    # 7. ÁREA PRINCIPAL
     st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
     if "map_center" not in st.session_state:
@@ -264,7 +262,8 @@ try:
     if "map_zoom" not in st.session_state:
         st.session_state.map_zoom = 12
 
-    m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron", attr="CartoDB")
+    # CAMBIO CLAVE: Usar OpenStreetMap en lugar de CartoDB para evitar el "API KEY REQUIRED"
+    m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
         "Santa Fe": (-31.616772, -60.701032),
@@ -296,7 +295,7 @@ try:
         folium.Marker(
             [rr["LATITUD"], rr["LONGITUD"]],
             icon=folium.DivIcon(html=f'''
-                <div style="font-size: 11px; font-weight: 700; color: {'#ef4444' if es_el_seleccionado else '#64748b'}; background: rgba(255,255,255,0.9); padding: 3px 6px; border-radius: 4px; transform: translate(12px, -12px); white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="font-size: 11px; font-weight: 700; color: {'#ef4444' if es_el_seleccionado else '#64748b'}; background: rgba(255,255,255,0.9); padding: 3px 6px; border-radius: 4px; transform: translate(12px, -12px); white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #cbd5e1;">
                     {rr["NOMBRE"]}
                 </div>
             ''')
@@ -316,7 +315,7 @@ try:
         folium.Marker(
             [r["LATITUD"], r["LONGITUD"]],
             icon=folium.DivIcon(html=f'''
-                <div style="font-size: 10px; font-weight: 700; color: #1e293b; background: rgba(255,255,255,0.9); padding: 2px 5px; border-radius: 4px; transform: translate(12px, -12px); white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 10px; font-weight: 700; color: #1e293b; background: rgba(255,255,255,0.9); padding: 2px 5px; border-radius: 4px; transform: translate(12px, -12px); white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #cbd5e1;">
                     {nombre_mostrar}
                 </div>
             ''')
@@ -367,7 +366,7 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # Renderizar Mapa (Aquí estaba el error, no debe estar dentro de un div flex)
+    # Renderizar Mapa
     map_data = st_folium(m, width="100%", height=480, key="mapa_encuentro")
 
     if map_data and map_data.get("center"):
