@@ -10,17 +10,14 @@ import base64
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS Avanzado (Estilo SENTRA, sin cortes y 100% adaptativo)
+# 2. CSS Avanzado
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Forzar fondo gris claro general */
-    .stApp { background-color: #f1f5f9 !important; }
-    
-    /* Ocultar TODA la interfaz de Streamlit (Header, Footer, Toolbar, Manage app) */
+    /* Ocultar interfaz nativa de Streamlit */
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
@@ -36,14 +33,12 @@ st.markdown("""
     div[class^="stStatusWidget"] { display: none !important; }
     [data-testid="stBottom"] { display: none !important; }
     
-    /* Contenedor principal sin márgenes */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
         padding-left: 0rem !important;
         padding-right: 0rem !important;
         margin-top: 0rem !important;
-        margin-bottom: 0rem !important;
         max-width: 100% !important;
     }
 
@@ -55,19 +50,19 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #1e293b;
-        height: 65px; /* Un pelín más fino */
+        height: 70px;
     }
     .header-left { display: flex; align-items: center; gap: 20px; height: 100%; }
     .header-title {
         color: #f8fafc;
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         font-weight: 800;
         margin: 0;
         letter-spacing: 0.5px;
     }
     .header-right {
         color: #94a3b8;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         font-weight: 700;
         text-align: right;
         letter-spacing: 0.5px;
@@ -107,37 +102,31 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
 
-    /* Tarjetas KPIs Inferiores */
+    /* Tarjetas KPIs Inferiores (Efecto Flotante) */
     .kpi-card {
         background: #ffffff;
         border-radius: 8px;
-        padding: 10px 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 12px 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* Sombra fuerte para que flote sobre el mapa */
         border: 1px solid #e2e8f0;
     }
     .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
     .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
-
-    /* TRUCO MAESTRO: Forzar al mapa a medir exactamente lo que sobra de pantalla */
-    iframe[title="streamlit_folium"] {
-        height: calc(100vh - 220px) !important; /* Calcula el alto de la pantalla menos el header y los KPIs */
-        min-height: 400px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. HEADER ESTILO SENTRA
+# 3. HEADER
 logo_path = Path(__file__).parent / "data_encuentro.png"
 
 if logo_path.exists():
     with open(logo_path, "rb") as f:
         img_str = base64.b64encode(f.read()).decode()
-    logo_html = f'<img src="data:image/png;base64,{img_str}" height="40">'
+    logo_html = f'<img src="data:image/png;base64,{img_str}" height="45">'
 else:
     logo_html = '''<div style="display:flex; align-items:center; gap:8px;">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
-        <span style="color:#c1121f; font-weight:900; font-size:1.5rem; line-height:1;">DATA<br><span style="font-size:0.9rem; letter-spacing:2px;">ENCUENTRO</span></span>
+        <span style="color:#c1121f; font-weight:900; font-size:1.6rem; line-height:1;">DATA<br><span style="font-size:0.9rem; letter-spacing:2px;">ENCUENTRO</span></span>
     </div>'''
 
 st.markdown(f"""
@@ -185,7 +174,7 @@ try:
     cons_cargado = 0.52
     cons_vacio = 0.30
 
-    # 5. SIDEBAR ESTILO SENTRA
+    # 5. SIDEBAR
     with st.sidebar:
         st.markdown('<div class="sentra-card-title">⚙️ Panel de Control</div>', unsafe_allow_html=True)
         
@@ -268,9 +257,9 @@ try:
     costo_diario = costo_viaje * viajes_dia
 
     # 7. ÁREA PRINCIPAL
-    st.markdown('<div style="padding: 10px 20px 0px 20px;">', unsafe_allow_html=True)
+    st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    # Mapa (El alto real lo maneja el CSS dinámico)
+    # MAPA DE 600PX (Como te gustó)
     m = folium.Map(location=[-31.60, -60.72], zoom_start=10, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
@@ -374,11 +363,13 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # Se deja un alto por defecto, pero el CSS de arriba lo sobreescribe para que sea dinámico
-    st_folium(m, width="100%", height=500, key="mapa_encuentro", returned_objects=[])
+    # ALTURA 600PX
+    st_folium(m, width="100%", height=600, key="mapa_encuentro", returned_objects=[])
 
-    # KPIs Inferiores (Estilo SENTRA)
-    st.markdown("<div style='margin-top: 5px; padding-bottom: 10px;'></div>", unsafe_allow_html=True)
+    # --- AQUÍ ESTÁ EL TRUCO PARA SUBIR LAS TARJETAS ---
+    # Margen negativo de -70px para que floten sobre el mapa y no se corten
+    st.markdown("<div style='margin-top: -70px; position: relative; z-index: 999; padding-bottom: 20px;'></div>", unsafe_allow_html=True)
+    
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
     with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
