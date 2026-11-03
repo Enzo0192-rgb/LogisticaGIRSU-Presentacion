@@ -28,8 +28,6 @@ st.markdown("""
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
-    
-    /* Regla agresiva para el botón Manage app */
     iframe[title="Manage app"] { display: none !important; }
     iframe[title="streamlit_app"] { display: none !important; }
     div[class^="stAppDeployButton"] { display: none !important; }
@@ -261,7 +259,7 @@ try:
     # 7. ÁREA PRINCIPAL
     st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    # APERTURA: Zoom 10 y centro ligeramente desplazado al norte (-31.60)
+    # MAPA EXTENDIDO (Zoom 10, centro ajustado)
     m = folium.Map(location=[-31.60, -60.72], zoom_start=10, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
@@ -365,10 +363,11 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    st_folium(m, width="100%", height=510, key="mapa_encuentro", returned_objects=[])
+    # MAPA EXTENDIDO HACIA ABAJO (Height=600)
+    st_folium(m, width="100%", height=600, key="mapa_encuentro", returned_objects=[])
 
     # KPIs Inferiores (Estilo SENTRA)
-    st.markdown("<div style='margin-top: 15px; padding-bottom: 15px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 10px; padding-bottom: 0px;'></div>", unsafe_allow_html=True)
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
     with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
