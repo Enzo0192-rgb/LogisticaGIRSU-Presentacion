@@ -28,7 +28,7 @@ st.markdown("""
         padding-bottom: 0rem !important;
         padding-left: 0rem !important;
         padding-right: 0rem !important;
-        margin-top: -50px !important; /* Fuerza a subir todo */
+        margin-top: -50px !important;
         max-width: 100% !important;
     }
 
@@ -115,7 +115,7 @@ with col_logo:
     if logo_path.exists():
         st.image(str(logo_path), width=180)
     else:
-        # Fallback de Logo Mejorado (Si no subiste la imagen)
+        # Logo simulado (por si no suben la imagen)
         st.markdown("""
         <div style="display: flex; align-items: center; gap: 8px; padding-top: 5px;">
             <svg style="width: 35px; height: 35px;" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -252,18 +252,24 @@ try:
     with st.container():
         st.markdown('<div class="content-padding">', unsafe_allow_html=True)
         
-        m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
+        # --- SOLUCIÓN AL REFRESH: Mantener el centro y zoom en la sesión ---
+        if "map_center" not in st.session_state:
+            st.session_state.map_center = [-31.63, -60.75]
+        if "map_zoom" not in st.session_state:
+            st.session_state.map_zoom = 11
 
-        # Coordenadas actualizadas de Sauce Viejo
+        m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap", attr="OpenStreetMap")
+
+        # Coordenadas exactas actualizadas
         centros_urbanos = {
-            "Santa Fe": (-31.6333, -60.7),
-            "Santo Tomé": (-31.66, -60.76),
-            "Rincón": (-31.63, -60.62),
-            "Recreo": (-31.48, -60.75),
+            "Santa Fe": (-31.616772, -60.701032),
+            "Santo Tomé": (-31.677154, -60.767621),
+            "San José del Rincón": (-31.612126, -60.586906),
+            "Recreo": (-31.493104, -60.731077),
             "Sauce Viejo": (-31.770770, -60.838399)
         }
 
-        # A. Opciones de Relleno (Siempre visibles)
+        # A. Opciones de Relleno
         for _, rr in df_rellenos.iterrows():
             es_el_seleccionado = (rr["ID_RELLENO"] == relleno_id)
             color_icono = "red" if es_el_seleccionado else "gray"
@@ -284,14 +290,13 @@ try:
                 ''')
             ).add_to(m)
 
-        # B. Infraestructura (ETs - EXCLUYENDO PLANTA DE ENERGÍA)
+        # B. Infraestructura (ETs sin Planta de Energía)
         nombres_et = {
             "ET1": "ET 1 - Actual Relleno",
             "ET2": "ET 2 - Santo Tomé",
             "ET3": "ET 3 - Recreo",
             "ET4": "ET 4 - Rincón"
         }
-        # Filtramos los FRS y la PE1 para que no se dibujen
         df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS") & (df_infra["ID"] != "PE1")].copy()
         
         for _, r in df_infra_mapa.iterrows():
@@ -308,7 +313,6 @@ try:
                 
             folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=nombre_mostrar, icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
             
-            # Etiqueta de la ET
             folium.Marker(
                 [r["LATITUD"], r["LONGITUD"]],
                 icon=folium.DivIcon(html=f'''
@@ -320,7 +324,6 @@ try:
 
         # C. FLUJOS LOGÍSTICOS
         if es_actual:
-            # Actual: Todo va directo a ET1 desde las ciudades
             destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [destino["LATITUD"], destino["LONGITUD"]]], delay=800, color="#ef4444", weight=5, opacity=0.9).add_to(m)
@@ -329,12 +332,10 @@ try:
         else:
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
             
-            # 1. Flujo Directo: Ciudades -> Relleno (Línea Roja Fuerte)
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
             
-            # 2. Flujo a ETs: Ciudades -> ET (Línea Azul Punteada - Solo para contexto)
             if escenario_sel in ["Futuro 800 - Alternativa 2", "Futuro 800 - Alternativa 3"]:
                 distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
                 et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
@@ -343,7 +344,6 @@ try:
                     for ciudad, (lat, lon) in centros_urbanos.items():
                         AntPath(locations=[[lat, lon], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=2, opacity=0.5, dash_array="5, 5").add_to(m)
 
-            # 3. Flujo a Planta de Energía (Se mantiene la lógica visual pero sin el ícono de la planta)
             if escenario_sel == "Futuro 800 - Alternativa 3":
                 planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for ciudad, (lat, lon) in centros_urbanos.items():
@@ -360,7 +360,12 @@ try:
 
         folium.LayerControl(collapsed=True, position='topright').add_to(m)
         
-        st_folium(m, width="100%", height=520, key="mapa_encuentro")
+        # --- SOLUCIÓN AL REFRESH: Capturar el estado final del mapa ---
+        map_data = st_folium(m, width="100%", height=520, key="mapa_encuentro")
+
+        if map_data and map_data.get("center"):
+            st.session_state.map_center = [map_data["center"]["lat"], map_data["center"]["lng"]]
+            st.session_state.map_zoom = map_data["zoom"]
 
         # KPIs Inferiores
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
