@@ -9,20 +9,20 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS (Todo más arriba, sin botones de Streamlit)
+# 2. CSS (Header Blanco, Título Negro, sin márgenes)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     
-    /* Ocultar menús, footers y el botón de Manage App */
+    /* Ocultar menús y footers */
     header { display: none !important; }
     footer { display: none !important; }
     #MainMenu { visibility: hidden !important; }
     [data-testid="stStatusWidget"] { visibility: hidden !important; }
     
-    /* Subir todo el contenido al máximo */
+    /* Subir todo el contenido */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
@@ -32,19 +32,19 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* --- BARRA SUPERIOR (Header) --- */
+    /* --- BARRA SUPERIOR (Header Blanco) --- */
     .top-navbar {
-        background-color: #0f172a;
+        background-color: #ffffff;
         padding: 8px 25px;
         display: flex;
         align-items: center;
-        border-bottom: 2px solid #1e293b;
-        height: 65px;
+        border-bottom: 1px solid #e2e8f0;
+        height: 70px;
     }
     
     .main-title {
-        color: #ffffff !important;
-        font-size: 1.7rem;
+        color: #0f172a !important; /* Título Negro */
+        font-size: 1.8rem;
         font-weight: 900;
         margin: 0;
         letter-spacing: 0.5px;
@@ -115,7 +115,7 @@ with col_logo:
     if logo_path.exists():
         st.image(str(logo_path), width=180)
     else:
-        # Logo simulado (por si no suben la imagen)
+        # Fallback de logo si no está la imagen
         st.markdown("""
         <div style="display: flex; align-items: center; gap: 8px; padding-top: 5px;">
             <svg style="width: 35px; height: 35px;" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -218,8 +218,8 @@ try:
         st.markdown("""
         <div class="sidebar-card">
             <div class="sidebar-title">Leyenda</div>
-            <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div> Flujo Directo a Relleno</div>
-            <div class="legend-item"><div class="legend-dot" style="background-color: #3b82f6;"></div> Recolección a ET</div>
+            <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div> Flujo Principal a Relleno</div>
+            <div class="legend-item"><div class="legend-dot" style="background-color: #3b82f6;"></div> Flujo Secundario (Ciudad → ET)</div>
             <div class="legend-item"><div class="legend-dot" style="background-color: #10b981;"></div> Flujo a Planta Energía</div>
         </div>
         """, unsafe_allow_html=True)
@@ -252,7 +252,7 @@ try:
     with st.container():
         st.markdown('<div class="content-padding">', unsafe_allow_html=True)
         
-        # --- SOLUCIÓN AL REFRESH: Mantener el centro y zoom en la sesión ---
+        # Mantener el estado del mapa
         if "map_center" not in st.session_state:
             st.session_state.map_center = [-31.63, -60.75]
         if "map_zoom" not in st.session_state:
@@ -260,13 +260,21 @@ try:
 
         m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="OpenStreetMap", attr="OpenStreetMap")
 
-        # Coordenadas exactas actualizadas
         centros_urbanos = {
             "Santa Fe": (-31.616772, -60.701032),
             "Santo Tomé": (-31.677154, -60.767621),
             "San José del Rincón": (-31.612126, -60.586906),
             "Recreo": (-31.493104, -60.731077),
             "Sauce Viejo": (-31.770770, -60.838399)
+        }
+
+        # Mapeo de ciudades a su ET más cercana para Alternativas 2 y 3
+        ciudad_a_et = {
+            "Santa Fe": "ET1",
+            "Santo Tomé": "ET2",
+            "San José del Rincón": "ET4",
+            "Recreo": "ET3",
+            "Sauce Viejo": "ET2" # Sauce Viejo se asigna a Santo Tomé por cercanía
         }
 
         # A. Opciones de Relleno
@@ -324,26 +332,41 @@ try:
 
         # C. FLUJOS LOGÍSTICOS
         if es_actual:
+            # Actual: Todo va directo a ET1 desde las ciudades
             destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [destino["LATITUD"], destino["LONGITUD"]]], delay=800, color="#ef4444", weight=5, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
         
-        else:
+        elif escenario_sel == "Futuro 800 - Alternativa 1":
+            # Alt 1: Flujo directo Ciudades -> Relleno
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
                 folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
-            
-            if escenario_sel in ["Futuro 800 - Alternativa 2", "Futuro 800 - Alternativa 3"]:
-                distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
-                et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
-                for et_id in et_ids:
-                    et = df_infra[df_infra["ID"] == et_id].iloc[0]
-                    for ciudad, (lat, lon) in centros_urbanos.items():
-                        AntPath(locations=[[lat, lon], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=2, opacity=0.5, dash_array="5, 5").add_to(m)
 
+        else:
+            # Alt 2 y 3: Flujo Secundario (Ciudad -> ET) y Principal (ET -> Relleno)
+            rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
+            
+            # Obtener qué ETs están activas en este escenario
+            distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
+            ets_activas = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
+            
+            for ciudad, et_id in ciudad_a_et.items():
+                if et_id not in ets_activas:
+                    continue
+                
+                # 1. Flujo Secundario (Ciudad -> ET)
+                lat_c, lon_c = centros_urbanos[ciudad]
+                et = df_infra[df_infra["ID"] == et_id].iloc[0]
+                AntPath(locations=[[lat_c, lon_c], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=3, opacity=0.6, dash_array="5, 5").add_to(m)
+                folium.CircleMarker([lat_c, lon_c], radius=6, color="#3b82f6", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
+                
+                # 2. Flujo Principal (ET -> Relleno)
+                AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=6, opacity=0.9).add_to(m)
+
+            # 3. Flujo a Planta de Energía (Alt 3)
             if escenario_sel == "Futuro 800 - Alternativa 3":
                 planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for ciudad, (lat, lon) in centros_urbanos.items():
@@ -360,7 +383,6 @@ try:
 
         folium.LayerControl(collapsed=True, position='topright').add_to(m)
         
-        # --- SOLUCIÓN AL REFRESH: Capturar el estado final del mapa ---
         map_data = st_folium(m, width="100%", height=520, key="mapa_encuentro")
 
         if map_data and map_data.get("center"):
