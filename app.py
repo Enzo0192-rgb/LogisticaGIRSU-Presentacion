@@ -5,12 +5,11 @@ from streamlit_folium import st_folium
 from folium.plugins import AntPath
 import math
 from pathlib import Path
-from datetime import datetime
 
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS (Estética profesional y Header corregido)
+# 2. CSS (Header compacto, estético y fijo)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -21,6 +20,7 @@ st.markdown("""
     
     .stApp { background-color: #f1f5f9; }
 
+    /* Reducir al máximo los márgenes superiores */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
@@ -29,15 +29,15 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* --- BARRA SUPERIOR (Header Oscuro) --- */
+    /* --- BARRA SUPERIOR (Header) --- */
     .top-navbar {
         background-color: #0f172a;
-        padding: 15px 30px;
+        padding: 12px 30px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #1e293b;
-        margin-bottom: 20px;
+        justify-content: space-between;
+        border-bottom: 2px solid #1e293b;
+        margin-bottom: 15px;
     }
     .main-title {
         color: #f8fafc !important;
@@ -45,6 +45,7 @@ st.markdown("""
         font-weight: 800;
         margin: 0;
         letter-spacing: 0.5px;
+        font-family: 'Inter', sans-serif;
     }
     
     /* --- SIDEBAR --- */
@@ -102,29 +103,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 3. BARRA SUPERIOR (Header)
-now = datetime.now().strftime("%d-%b, %H:%M %p")
-# ATENCIÓN: Sube la imagen del logo como 'data_encuentro.png' a tu repositorio
 logo_path = Path(__file__).parent / "data_encuentro.png"
 
 st.markdown('<div class="top-navbar">', unsafe_allow_html=True)
-col_logo, col_title, col_status = st.columns([1.5, 5, 2.5])
+col_logo, col_title = st.columns([1, 5])
 
 with col_logo:
     if logo_path.exists():
-        st.image(str(logo_path), width=160)
+        st.image(str(logo_path), width=180)
     else:
-        st.markdown("<div style='background:white; padding:5px 10px; border-radius:5px; color:#c1121f; font-weight:bold;'>DATA ENCUENTRO</div>", unsafe_allow_html=True)
+        # Fallback si no se ha subido la imagen
+        st.markdown("<div style='background:white; padding:5px 10px; border-radius:5px; color:#c1121f; font-weight:800; font-size:1.2rem; display:inline-block;'>DATA ENCUENTRO</div>", unsafe_allow_html=True)
 
 with col_title:
     st.markdown("<h1 class='main-title'>DASHBOARD de alternativas</h1>", unsafe_allow_html=True)
-
-with col_status:
-    st.markdown(f"""
-    <div style="text-align: right; color: #94a3b8; font-size: 0.85rem; padding-top: 10px;">
-        <span style="color: #10b981; margin-right: 15px;">🟢 Estado: Óptimo</span>
-        {now}
-    </div>
-    """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # 4. CARGA DE DATOS
@@ -172,6 +164,7 @@ try:
         escenario_sel = st.selectbox("Escenario Operativo", df_escenarios["ESCENARIO"].dropna().tolist())
         escenario_row = df_escenarios[df_escenarios["ESCENARIO"] == escenario_sel].iloc[0]
         es_actual = escenario_sel == "Actual 600"
+        es_alt_1 = escenario_sel == "Futuro 800 - Alternativa 1"
 
         if es_actual:
             relleno_sel = "Actual Relleno Sanitario"
@@ -211,13 +204,13 @@ try:
         st.markdown("""
         <div class="sidebar-card">
             <div class="sidebar-title">Leyenda</div>
-            <div class="legend-item"><div class="legend-dot" style="background-color: #3b82f6;"></div> Origen → ET</div>
-            <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div> ET → Relleno / Directo</div>
+            <div class="legend-item"><div class="legend-dot" style="background-color: #3b82f6;"></div> Origen → ET (Solo Alt 2/3)</div>
+            <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div> Flujo Directo / ET → Relleno</div>
             <div class="legend-item"><div class="legend-dot" style="background-color: #10b981;"></div> Flujo a Planta Energía</div>
         </div>
         """, unsafe_allow_html=True)
 
-    # 6. CÁLCULOS LOGÍSTICOS (Sin modificar)
+    # 6. CÁLCULOS LOGÍSTICOS
     col_ton = "TON_ACTUAL_DIA" if generacion_total == 600 else "TON_PROYECTADA_800"
     df_origenes = df_residuos[["ORIGEN", col_ton]].copy()
     df_origenes.columns = ["ORIGEN", "TON_DIA"]
@@ -247,20 +240,18 @@ try:
         
         m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
 
-        # --- A. TODAS LAS OPCIONES DE RELLENO VISIBLES ---
+        # A. Todas las opciones de relleno visibles
         for _, rr in df_rellenos.iterrows():
             es_el_seleccionado = (rr["ID_RELLENO"] == relleno_id)
             color_icono = "red" if es_el_seleccionado else "gray"
-            opacidad = 1.0 if es_el_seleccionado else 0.5
             prefijo = "★ Futuro RS" if es_el_seleccionado else "Opción RS"
             
             folium.Marker(
                 [rr["LATITUD"], rr["LONGITUD"]],
                 tooltip=f"{prefijo}: {rr['NOMBRE']}",
-                icon=folium.Icon(color=color_icono, icon="flag", prefix="fa", opacity=opacidad)
+                icon=folium.Icon(color=color_icono, icon="flag", prefix="fa")
             ).add_to(m)
             
-            # Etiqueta de texto para que se lea bien
             folium.Marker(
                 [rr["LATITUD"], rr["LONGITUD"]],
                 icon=folium.DivIcon(html=f'''
@@ -270,86 +261,77 @@ try:
                 ''')
             ).add_to(m)
 
-        # --- B. INFRAESTRUCTURA (ETs CON NOMBRES EXACTOS) ---
-        nombres_et = {
-            "ET1": "ET 1 - Actual Relleno Sanitario",
-            "ET2": "ET 2 - Santo Tomé",
-            "ET3": "ET 3 - Recreo",
-            "ET4": "ET 4 - Rincón",
-            "PE1": "Planta de Energía"
-        }
-
-        df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
-        for _, r in df_infra_mapa.iterrows():
-            if pd.isna(r["LATITUD"]): continue
-            nombre_mostrar = nombres_et.get(r["ID"], r["NOMBRE"])
-            
-            # Si es la ET1 y estamos en el escenario actual, la destacamos como Relleno.
-            if r["ID"] == "ET1" and es_actual:
-                nombre_mostrar = "Actual Relleno Sanitario (ET 1)"
-                color = "red"
-                icon = "flag"
-            else:
-                color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
-                icon = "bolt" if color == "green" else "truck"
+        # B. Infraestructura (Solo visible si NO es Alternativa 1)
+        if not es_alt_1:
+            nombres_et = {
+                "ET1": "ET 1 - Actual Relleno",
+                "ET2": "ET 2 - Santo Tomé",
+                "ET3": "ET 3 - Recreo",
+                "ET4": "ET 4 - Rincón",
+                "PE1": "Planta de Energía"
+            }
+            df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
+            for _, r in df_infra_mapa.iterrows():
+                if pd.isna(r["LATITUD"]): continue
+                nombre_mostrar = nombres_et.get(r["ID"], r["NOMBRE"])
                 
-            folium.Marker(
-                [r["LATITUD"], r["LONGITUD"]], 
-                tooltip=nombre_mostrar, 
-                icon=folium.Icon(color=color, icon=icon, prefix="fa")
-            ).add_to(m)
-            
-            # Etiqueta de texto
-            folium.Marker(
-                [r["LATITUD"], r["LONGITUD"]],
-                icon=folium.DivIcon(html=f'''
-                    <div style="font-size: 10px; font-weight: bold; color: #1e293b; background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 4px; transform: translate(10px, -15px); white-space: nowrap; border: 1px solid #cbd5e1;">
-                        {nombre_mostrar.split('-')[0].strip()}
-                    </div>
-                ''')
-            ).add_to(m)
+                if r["ID"] == "ET1" and es_actual:
+                    nombre_mostrar = "Actual Relleno Sanitario (ET 1)"
+                    color = "red"
+                    icon = "flag"
+                else:
+                    color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
+                    icon = "bolt" if color == "green" else "truck"
+                    
+                folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=nombre_mostrar, icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
+                folium.Marker(
+                    [r["LATITUD"], r["LONGITUD"]],
+                    icon=folium.DivIcon(html=f'''
+                        <div style="font-size: 10px; font-weight: bold; color: #1e293b; background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 4px; transform: translate(10px, -15px); white-space: nowrap; border: 1px solid #cbd5e1;">
+                            {nombre_mostrar.split('-')[0].strip()}
+                        </div>
+                    ''')
+                ).add_to(m)
 
-        # --- C. ORÍGENES (Solo como referencia) ---
-        origenes_coords = df_dist[["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
-        for _, o in origenes_coords.iterrows():
-            folium.CircleMarker(
-                [o["ORIGEN_LAT"], o["ORIGEN_LON"]],
-                radius=5, color="#3b82f6", fill=True, fill_opacity=0.5,
-                tooltip=f"Origen: {o['ORIGEN']}"
-            ).add_to(m)
-
-        # --- D. FLUJOS ORDENADOS ---
+        # C. Flujos Lógicos
         if es_actual:
-            # Todo va a ET1
             destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
+            origenes_coords = df_dist[["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
             for _, o in origenes_coords.iterrows():
                 AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [destino["LATITUD"], destino["LONGITUD"]]], delay=800, color="#ef4444", weight=4, opacity=0.8).add_to(m)
         
-        elif escenario_sel == "Futuro 800 - Alternativa 1":
-            # Directo de Origenes al Futuro RS
+        elif es_alt_1:
+            # Flujos directos desde centros urbanos específicos
+            centros_urbanos = {
+                "Santa Fe": (-31.6333, -60.7),
+                "Santo Tomé": (-31.66, -60.76),
+                "Rincón": (-31.63, -60.62),
+                "Recreo": (-31.48, -60.75)
+            }
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            for _, o in origenes_coords.iterrows():
-                AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=4, opacity=0.8).add_to(m)
+            for ciudad, (lat, lon) in centros_urbanos.items():
+                AntPath(locations=[[lat, lon], [rr["LATITUD"], rr["LONGITUD"]]], delay=800, color="#ef4444", weight=5, opacity=0.9).add_to(m)
+                folium.CircleMarker([lat, lon], radius=6, color="#ef4444", fill=True, fill_opacity=0.8, tooltip=f"Origen: {ciudad}").add_to(m)
         
         else:
-            # Alternativas 2 y 3: El foco es ET -> RS (Rojo grueso). 
+            # Alternativas 2 y 3
             rr = df_rellenos[df_rellenos["ID_RELLENO"] == relleno_id].iloc[0]
-            
             distrib_esc = df_distrib[df_distrib["ESCENARIO"] == escenario_sel]
             et_ids = distrib_esc[distrib_esc["DESTINO_ID"].astype(str).str.startswith("ET")]["DESTINO_ID"].tolist()
+            origenes_coords = df_dist[["ORIGEN", "ORIGEN_LAT", "ORIGEN_LON"]].drop_duplicates()
             
-            # 1. Flujos ET -> RS (Lo más importante)
+            # 1. Flujos ET -> RS (Prioridad visual)
             for et_id in et_ids:
                 et = df_infra[df_infra["ID"] == et_id].iloc[0]
                 AntPath(locations=[[et["LATITUD"], et["LONGITUD"]], [rr["LATITUD"], rr["LONGITUD"]]], delay=1000, color="#ef4444", weight=6, opacity=0.9).add_to(m)
             
-            # 2. Flujos Origen -> ET (Sutil, para contexto)
+            # 2. Flujos Origen -> ET (Contexto sutil)
             for et_id in et_ids:
                 et = df_infra[df_infra["ID"] == et_id].iloc[0]
                 for _, o in origenes_coords.iterrows():
                     AntPath(locations=[[o["ORIGEN_LAT"], o["ORIGEN_LON"]], [et["LATITUD"], et["LONGITUD"]]], delay=800, color="#3b82f6", weight=2, opacity=0.4, dash_array="5, 5").add_to(m)
 
-            # 3. Planta de Energía (Solo Alternativa 3)
+            # 3. Planta de Energía
             if escenario_sel == "Futuro 800 - Alternativa 3":
                 planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for _, o in origenes_coords.iterrows():
@@ -365,12 +347,10 @@ try:
             folium.raster_layers.WmsTileLayer(url=wms_url, layers=layers, name=name, fmt="image/png", transparent=True, overlay=True, control=True, show=False).add_to(m)
 
         folium.LayerControl(collapsed=True, position='topright').add_to(m)
-
-        st_folium(m, width="100%", height=480, key="mapa_encuentro")
+        st_folium(m, width="100%", height=500, key="mapa_encuentro")
 
         # KPIs Inferiores
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
         with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
