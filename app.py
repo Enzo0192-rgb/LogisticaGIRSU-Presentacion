@@ -28,7 +28,7 @@ st.markdown("""
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
     
-    /* Eliminar la barra negra inferior */
+    /* Eliminar la barra negra inferior y forzar fondo claro */
     [data-testid="stBottom"] { display: none !important; }
     .stApp { background-color: #f1f5f9 !important; }
     
@@ -39,7 +39,6 @@ st.markdown("""
         padding-right: 0rem !important;
         margin-top: 0rem !important;
         max-width: 100% !important;
-        overflow: hidden !important; /* Evita scroll en el contenedor principal */
     }
 
     /* --- HEADER ESTILO SENTRA --- */
@@ -113,6 +112,15 @@ st.markdown("""
     .kpi-label { color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .kpi-value { color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
     .kpi-value-blue { color: #2563eb; font-size: 1.2rem; font-weight: 800; margin-top: 2px; }
+
+    /* TRUCO FINAL: Subir el contenedor de las columnas de Streamlit */
+    div[data-testid="stHorizontalBlock"] {
+        margin-top: -80px !important; /* Sube las tarjetas sobre el mapa */
+        position: relative;
+        z-index: 9999; /* Asegura que estén por encima del iframe del mapa */
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -257,9 +265,9 @@ try:
     costo_diario = costo_viaje * viajes_dia
 
     # 7. ÁREA PRINCIPAL
-    st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9; position: relative;">', unsafe_allow_html=True)
+    st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    # MAPA DE 600PX (Intacto)
+    # Mapa de 600px
     m = folium.Map(location=[-31.60, -60.72], zoom_start=10, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
@@ -278,6 +286,7 @@ try:
         "Sauce Viejo": "ET2"
     }
 
+    # A. Opciones de Relleno
     for _, rr in df_rellenos.iterrows():
         es_el_seleccionado = (rr["ID_RELLENO"] == relleno_id)
         color_icono = "red" if es_el_seleccionado else "gray"
@@ -297,6 +306,7 @@ try:
             ''')
         ).add_to(m)
 
+    # B. Infraestructura (ETs)
     nombres_et = {"ET1": "ET 1", "ET2": "ET 2", "ET3": "ET 3", "ET4": "ET 4"}
     df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS") & (df_infra["ID"] != "PE1")].copy()
     
@@ -316,6 +326,7 @@ try:
             ''')
         ).add_to(m)
 
+    # C. FLUJOS LOGÍSTICOS
     if es_actual:
         destino = df_infra[df_infra["ID"] == "ET1"].iloc[0]
         for ciudad, (lat, lon) in centros_urbanos.items():
@@ -349,6 +360,7 @@ try:
             for ciudad, (lat, lon) in centros_urbanos.items():
                 AntPath(locations=[[lat, lon], [planta["LATITUD"], planta["LONGITUD"]]], delay=800, color="#10b981", weight=4, opacity=0.8).add_to(m)
 
+    # Capas WMS
     wms_url = "https://aswe.santafe.gov.ar/idesf/wms"
     for layers, name in [
         ("areas_de_riesgo_hidrico", "🌊 Riesgo hídrico"),
@@ -359,21 +371,10 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # Mapa de 600px
+    # MAPA (600PX INTACTO)
     st_folium(m, width="100%", height=600, key="mapa_encuentro", returned_objects=[])
 
-    # --- AQUÍ ESTÁ EL TRUCO PARA QUE FLOTEN SOBRE EL MAPA ---
-    # Usamos posicionamiento absoluto para que las tarjetas se superpongan al mapa
-    st.markdown("""
-    <div style="
-        position: absolute; 
-        bottom: 20px; 
-        left: 20px; 
-        right: 20px; 
-        z-index: 1000;
-    ">
-    """, unsafe_allow_html=True)
-    
+    # Las tarjetas de abajo. El CSS de arriba se encarga de subirlas sobre el mapa.
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Km ida a RS</div><div class="kpi-value">{km_directo:.1f} km</div></div>''', unsafe_allow_html=True)
     with k2: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Viaje Redondo</div><div class="kpi-value">{km_directo*2:.1f} km</div></div>''', unsafe_allow_html=True)
@@ -382,7 +383,6 @@ try:
     with k5: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Costo / Viaje</div><div class="kpi-value">$ {costo_viaje:,.0f}</div></div>''', unsafe_allow_html=True)
     with k6: st.markdown(f'''<div class="kpi-card"><div class="kpi-label">Costo Diario</div><div class="kpi-value-blue">$ {costo_diario:,.0f}</div></div>''', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 except Exception as e:
