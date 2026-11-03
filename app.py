@@ -28,6 +28,10 @@ st.markdown("""
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
     button[data-testid="baseButton-headerNoPadding"] { display: none !important; }
+    
+    /* Regla agresiva para el botón Manage app */
+    iframe[title="Manage app"] { display: none !important; }
+    iframe[title="streamlit_app"] { display: none !important; }
     div[class^="stAppDeployButton"] { display: none !important; }
     div[class^="stStatusWidget"] { display: none !important; }
     
@@ -257,8 +261,8 @@ try:
     # 7. ÁREA PRINCIPAL
     st.markdown('<div style="padding: 15px 20px 0px 20px; background-color: #f1f5f9;">', unsafe_allow_html=True)
 
-    # Ajuste de apertura: zoom_start=11 y height=510
-    m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
+    # APERTURA: Zoom 10 y centro ligeramente desplazado al norte (-31.60)
+    m = folium.Map(location=[-31.60, -60.72], zoom_start=10, tiles="OpenStreetMap", attr="OpenStreetMap")
 
     centros_urbanos = {
         "Santa Fe": (-31.616772, -60.701032),
@@ -361,7 +365,6 @@ try:
 
     folium.LayerControl(collapsed=True, position='topright').add_to(m)
     
-    # MAPA MÁS ALTO (height=510)
     st_folium(m, width="100%", height=510, key="mapa_encuentro", returned_objects=[])
 
     # KPIs Inferiores (Estilo SENTRA)
