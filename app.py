@@ -9,41 +9,45 @@ from pathlib import Path
 # 1. Configuración de página
 st.set_page_config(page_title="Dashboard de alternativas", layout="wide")
 
-# 2. CSS (Márgenes cero, Header perfecto)
+# 2. CSS (Todo más arriba, sin botones de Streamlit)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    
+    /* Ocultar menús, footers y el botón de Manage App */
     header { display: none !important; }
     footer { display: none !important; }
+    #MainMenu { visibility: hidden !important; }
+    [data-testid="stStatusWidget"] { visibility: hidden !important; }
     
+    /* Subir todo el contenido al máximo */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
         padding-left: 0rem !important;
         padding-right: 0rem !important;
-        margin-top: 0rem !important;
+        margin-top: -50px !important; /* Fuerza a subir todo */
         max-width: 100% !important;
     }
 
     /* --- BARRA SUPERIOR (Header) --- */
     .top-navbar {
         background-color: #0f172a;
-        padding: 10px 25px;
+        padding: 8px 25px;
         display: flex;
         align-items: center;
         border-bottom: 2px solid #1e293b;
-        height: 70px;
+        height: 65px;
     }
     
     .main-title {
         color: #ffffff !important;
-        font-size: 1.8rem;
-        font-weight: 800;
+        font-size: 1.7rem;
+        font-weight: 900;
         margin: 0;
-        letter-spacing: 1px;
-        text-shadow: 0px 2px 4px rgba(0,0,0,0.5);
+        letter-spacing: 0.5px;
     }
     
     /* --- SIDEBAR --- */
@@ -105,14 +109,26 @@ st.markdown("""
 logo_path = Path(__file__).parent / "data_encuentro.png"
 
 st.markdown('<div class="top-navbar">', unsafe_allow_html=True)
-col_logo, col_title = st.columns([1.2, 5])
+col_logo, col_title = st.columns([1.5, 6])
 
 with col_logo:
     if logo_path.exists():
         st.image(str(logo_path), width=180)
     else:
-        # Un fallback más elegante por si no suben la imagen
-        st.markdown("<div style='background:transparent; padding:5px 10px; border-radius:5px; color:#c1121f; font-weight:800; font-size:1.2rem; display:inline-block; border: 1px solid #c1121f;'>DATA ENCUENTRO</div>", unsafe_allow_html=True)
+        # Fallback de Logo Mejorado (Si no subiste la imagen)
+        st.markdown("""
+        <div style="display: flex; align-items: center; gap: 8px; padding-top: 5px;">
+            <svg style="width: 35px; height: 35px;" viewBox="0 0 24 24" fill="none" stroke="#c1121f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="2" x2="12" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+            </svg>
+            <span style="color: #c1121f; font-weight: 900; font-size: 1.8rem; letter-spacing: -1px; line-height: 0.9;">
+                DATA<br><span style="font-size: 1rem; letter-spacing: 2px;">ENCUENTRO</span>
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
 
 with col_title:
     st.markdown("<h1 class='main-title'>DASHBOARD de alternativas</h1>", unsafe_allow_html=True)
@@ -238,12 +254,13 @@ try:
         
         m = folium.Map(location=[-31.63, -60.75], zoom_start=11, tiles="OpenStreetMap", attr="OpenStreetMap")
 
+        # Coordenadas actualizadas de Sauce Viejo
         centros_urbanos = {
             "Santa Fe": (-31.6333, -60.7),
             "Santo Tomé": (-31.66, -60.76),
             "Rincón": (-31.63, -60.62),
             "Recreo": (-31.48, -60.75),
-            "Sauce Viejo": (-31.70, -60.82)
+            "Sauce Viejo": (-31.770770, -60.838399)
         }
 
         # A. Opciones de Relleno (Siempre visibles)
@@ -267,15 +284,16 @@ try:
                 ''')
             ).add_to(m)
 
-        # B. Infraestructura (ETs y Planta - Siempre visibles)
+        # B. Infraestructura (ETs - EXCLUYENDO PLANTA DE ENERGÍA)
         nombres_et = {
             "ET1": "ET 1 - Actual Relleno",
             "ET2": "ET 2 - Santo Tomé",
             "ET3": "ET 3 - Recreo",
-            "ET4": "ET 4 - Rincón",
-            "PE1": "Planta de Energía"
+            "ET4": "ET 4 - Rincón"
         }
-        df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS")].copy()
+        # Filtramos los FRS y la PE1 para que no se dibujen
+        df_infra_mapa = df_infra[~df_infra["ID"].astype(str).str.startswith("FRS") & (df_infra["ID"] != "PE1")].copy()
+        
         for _, r in df_infra_mapa.iterrows():
             if pd.isna(r["LATITUD"]): continue
             nombre_mostrar = nombres_et.get(r["ID"], r["NOMBRE"])
@@ -285,8 +303,8 @@ try:
                 color = "red"
                 icon = "flag"
             else:
-                color = "green" if str(r["TIPO"]).lower() == "planta" else "blue"
-                icon = "bolt" if color == "green" else "truck"
+                color = "blue"
+                icon = "truck"
                 
             folium.Marker([r["LATITUD"], r["LONGITUD"]], tooltip=nombre_mostrar, icon=folium.Icon(color=color, icon=icon, prefix="fa")).add_to(m)
             
@@ -325,7 +343,7 @@ try:
                     for ciudad, (lat, lon) in centros_urbanos.items():
                         AntPath(locations=[[lat, lon], [et["LATITUD"], et["LONGITUD"]]], delay=1200, color="#3b82f6", weight=2, opacity=0.5, dash_array="5, 5").add_to(m)
 
-            # 3. Flujo a Planta de Energía
+            # 3. Flujo a Planta de Energía (Se mantiene la lógica visual pero sin el ícono de la planta)
             if escenario_sel == "Futuro 800 - Alternativa 3":
                 planta = df_infra[df_infra["ID"] == "PE1"].iloc[0]
                 for ciudad, (lat, lon) in centros_urbanos.items():
